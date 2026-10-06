@@ -585,6 +585,24 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 #coral-welcome-title:focus,#challenge-title:focus{outline:none;}
 .coral-welcome .welcome-listen{display:inline-block;font-size:13px;font-weight:400;min-height:36px;padding:6px 14px;margin:10px 0 0;}
 .coral-welcome p{white-space:pre-line;font-size:clamp(16px,4.6vw,20px);}
+
+.welcome-modes{display:flex;justify-content:center;gap:12px;margin-top:18px;}
+.welcome-modes button{min-width:110px;font-size:16px;min-height:42px;}
+.welcome-modes button[aria-pressed="true"]{border-color:#ffe38c;background:#17466b;color:#ffe99b;}
+.welcome-mode-note{display:block;margin:12px auto 0;line-height:1.6;color:#d1eaff;}
+.round-results{font-size:clamp(23px,5vw,32px);font-weight:700;margin:18px 0;}
+.round-results[hidden],.ending-ok[hidden]{display:none;}
+#ending-invitation{white-space:pre-line;}
+#ending-title:focus{outline:none;}
+.arcade-banner.coral-cheer{top:22%;animation:none;}
+.coral-cheer .coral-portrait{width:clamp(100px,22vh,175px);aspect-ratio:1;margin:0 auto 10px;}
+.coral-cheer strong{display:block;font-size:clamp(20px,4.5vw,32px);}
+.coral-cheer .oni-speech{display:block;font-size:clamp(18px,4vw,27px);transform:none;margin-top:8px;}
+body.endless-mode .streak-stars{display:none!important;}
+@media(orientation:landscape){
+  .chord-row{padding-top:0;align-items:center;}
+  .resident-mascot.coral-portrait{width:48px;height:48px;align-self:center;max-height:100%;transform:translateY(-2px);}
+}
 </style>
 </head>
 <body>
@@ -1003,9 +1021,33 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
       updateSettingsUI();
     });
 
-    function getAdjustedTime(baseMs) {
-      return appSettings.speed === 'fast' ? baseMs / 2 : baseMs;
+    let sessionMode='normal';
+    let roundStats={total:0,correct:0,streak:0};
+    let scaleSpeedBoost=false,scaleSpeedBeforeBoost=null;
+    function roundLimit(){return sessionMode==='normal'?30:100;}
+    function resetScaleSpeedBoost(){
+      if(scaleSpeedBoost && scaleSpeedBeforeBoost!==null) appSettings.speed=scaleSpeedBeforeBoost;
+      scaleSpeedBoost=false;scaleSpeedBeforeBoost=null;
     }
+    function enableScaleSpeedBoost(){
+      if(!scaleSpeedBoost) scaleSpeedBeforeBoost=appSettings.speed;
+      scaleSpeedBoost=true;
+    }
+    function playbackSpeedFactor(){
+      return (appSettings.speed==='fast'?.5:1)/(scaleSpeedBoost && questionTypeSelect.value==='scale'?2:1);
+    }
+    function recordRoundAnswer(correct){
+      if(roundStats.total>=roundLimit()) return 'finished';
+      roundStats.total++;
+      roundStats.correct+=Number(correct);
+      roundStats.streak=correct?roundStats.streak+1:0;
+      if(!correct) resetScaleSpeedBoost();
+      if(roundStats.total===roundLimit()) return 'finish';
+      if(sessionMode==='endless') return correct && roundStats.streak%10===0 && roundStats.streak<=90?'endless-cheer':'normal';
+      return correct?({5:'unlock',10:'hot',15:'oni',20:'challenge',25:'cheer25'}[roundStats.streak] || 'normal'):'normal';
+    }
+    let roundEvent='normal';
+    function getAdjustedTime(baseMs) { return baseMs*playbackSpeedFactor(); }
 
     const NS = 'http://www.w3.org/2000/svg';
     // Bass sounds one octave above standard bass tuning; original keeps the legacy register.
@@ -1193,18 +1235,15 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     let difficultyStates = instrumentProgress.guitar.difficulty;
     function difficulty() { return difficultyStates[questionTypeSelect.value]; }
     function recordResult(correct) {
-      const state = difficulty();
-      if (correct) {
-        state.correct++;
-        state.wrong = 0;
-        if (state.correct >= 5) state.hard = true;
-      } else {
-        state.correct = 0;
-        state.wrong++;
-        if (state.hard && state.wrong >= 1) {
-          state.hard = false;
-          state.wrong = 0;
-        }
+      roundEvent=recordRoundAnswer(correct);
+      // Streak and progress belong to the round, even when the instrument changes.
+      Object.values(instrumentProgress).forEach(progress=>Object.values(progress.difficulty).forEach(state=>{
+        state.correct=roundStats.streak;state.wrong=0;
+        state.hard=sessionMode==='normal' && roundStats.streak>=5;
+      }));
+      if(!correct){
+        Object.values(instrumentProgress).forEach(progress=>Object.keys(progress.fever).forEach(mode=>{progress.fever[mode]=0;progress.oni[mode]=false;}));
+        updateSettingsUI();
       }
       updateDeckCounterDisplay();
     }
@@ -1562,7 +1601,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
       if (!midiNotes || midiNotes.length === 0) return;
       const sortedMidis = [...midiNotes].sort((a, b) => a - b);
       const voiceScale = instrumentMode !== 'original' ? Math.min(1, 3 / sortedMidis.length) : 1;
-      const speedFactor = appSettings.speed === 'fast' ? 0.5 : 1.0;
+      const speedFactor = playbackSpeedFactor();
       
       const startTime = ensureAudio().currentTime;
       const endTime = startTime + 1.2 * speedFactor;
@@ -1584,7 +1623,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 
       const sortedMidis = [...game.chordMidiNotes].sort((a, b) => a - b);
       const voiceScale = instrumentMode !== 'original' ? Math.min(1, 3 / sortedMidis.length) : 1;
-      const speedFactor = appSettings.speed === 'fast' ? 0.5 : 1.0;
+      const speedFactor = playbackSpeedFactor();
 
       const intervalMs = 280 * speedFactor;
       const sustainTime = 1.0 * speedFactor;
@@ -1614,7 +1653,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
       const midi = string.midi + fret;
       const note = noteName(midi);
       if (showStatus) setStatus(null, `${string.name} String / ${fret} Fret — ${note}`);
-      const speedFactor = appSettings.speed === 'fast' ? 0.5 : 1.0;
+      const speedFactor = playbackSpeedFactor();
       play(midi, sustain * speedFactor, .35, undefined, 'question');
       if (!showVisual) return;
       
@@ -2552,10 +2591,11 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   feverRibbon.append(feverRibbonText);
   statusBox.append(feverRibbon);
   function feverStage() {
+    if(sessionMode==='endless') return 0;
     const state = difficulty();
     const mode = questionTypeSelect.value;
     feverPeaks[mode] = state.hard ? Math.max(feverPeaks[mode] || 0,state.correct) : 0;
-    return !state.hard ? 0 : feverPeaks[mode]>=20 ? 3 : feverPeaks[mode]>=15 ? 2 : 1;
+    return !state.hard ? 0 : feverPeaks[mode]>=15 ? 3 : feverPeaks[mode]>=10 ? 2 : 1;
   }
   function updateDeckCounterDisplay() {
     const state = difficulty();
@@ -2563,9 +2603,9 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     deckCounter.classList.toggle('hard-mode', state.hard);
     feverStage();
     const stars=document.createElement('span'); stars.className='streak-stars'; stars.setAttribute('aria-hidden','true');
-    for(let i=0;i<state.correct;i++) { const star=document.createElement('span'); star.textContent='★'; if((i+1)%5===0) star.classList.add('milestone-star'); if((i+1)%10===0) star.classList.add('silver-star'); stars.append(star); }
+    for(let i=0;i<(sessionMode==='endless'?0:state.correct);i++) { const star=document.createElement('span'); star.textContent='★'; if((i+1)%5===0) star.classList.add('milestone-star'); if((i+1)%10===0) star.classList.add('silver-star'); stars.append(star); }
     const label=document.createElement('span'); label.className='streak-label';
-    label.textContent=english ? `Stars ⭐️ ${state.correct}` : `星 ⭐️ ${state.correct}個`;
+    label.textContent=english ? `${roundStats.total}/${roundLimit()} · ${roundStats.streak} in a row` : `${roundStats.total}/${roundLimit()}問 · ${roundStats.streak}連続正解`;
     deckCounter.replaceChildren(stars,label);
     if (!state.hard) oniCompleted[questionTypeSelect.value]=false;
     syncResidentMascot();
@@ -2582,11 +2622,11 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     stopArcadeAudio();
   }
   function syncResidentMascot() {
-    residentMascot.hidden=!(arcadeEnabled && difficulty().correct>=20 &&
-      oniCompleted[questionTypeSelect.value] && !oniPending && !oniPartyActive);
+    residentMascot.hidden=!(sessionMode==='endless' || (arcadeEnabled && roundStats.streak>=15 && !oniPending && !oniPartyActive));
   }
   function syncArcadeUI() {
     updatePowerUI();
+    document.body.classList.toggle('endless-mode',sessionMode==='endless');
     arcadeToggle.textContent = (appSettings.lang === 'on' ? 'Effects ' : '演出 ') + (arcadeEnabled ? 'ON' : 'OFF');
     document.body.classList.toggle('arcade-listening', game.phase === 'playing');
     const tier = feverStage();
@@ -2607,9 +2647,11 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   function showArcadeResult(correct, unlocked, kind = 'normal') {
     clearArcade();
     if (!arcadeEnabled || document.hidden) return;
+    if(kind==='endless-cheer' || kind==='cheer25'){showCoralCheer(kind);return;}
+    if(sessionMode==='endless') return;
     const english = appSettings.lang === 'on';
     const banner = document.createElement('div');
-    banner.className = 'arcade-banner' + (kind === 'cheer30' || kind === 'cheer40' ? ' cheer' : kind === 'unlock' ? ' fever-start' : kind === 'end' ? ' fever-end' : kind === 'oni' ? ' oni' : kind === 'hot' ? ' hot' : correct ? '' : ' miss');
+    banner.className = 'arcade-banner' + (kind === 'unlock' ? ' fever-start' : kind === 'end' ? ' fever-end' : kind === 'oni' ? ' oni' : kind === 'hot' ? ' hot' : correct ? '' : ' miss');
     const title = document.createElement('strong');
     const subtitle = document.createElement('small');
     title.textContent = correct ? (unlocked ? '★ FEVER ★' : '★ GREAT! ★') : 'TRY AGAIN';
@@ -2617,9 +2659,8 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
       ? (unlocked ? (english ? '5 IN A ROW · HARD MODE UNLOCKED' : '5連続正解！ HARD MODE 突入！') : (english ? 'PERFECT CATCH! · ' : 'お見事！ 音をキャッチ！ · ') + difficulty().correct + (english ? ' STREAK' : ' 連続正解'))
       : (english ? 'Listen again. Your next catch awaits.' : '惜しい！ もう一度、音を聴いてみよう');
     if(kind==='unlock') { title.textContent='FEVER START!'; subtitle.textContent=english?'5 IN A ROW · LET THE FEVER BEGIN!\nQuestions get a little harder!':'5連続正解！ フィーバータイム、スタート！\n問題が少し難しくなるよ。'; }
-    if(kind==='cheer30' || kind==='cheer40') { title.textContent=kind==='cheer30'?'30 COMBO!':'40 COMBO!'; subtitle.textContent=english?'KEEP THE STREAK ALIVE!':'その連続正解、まだまだ続く！'; }
-    if(kind==='hot') { title.textContent=english?'SUPER HOT!':'激アツ!!'; subtitle.textContent=english?'15 CONSECUTIVE HITS · THE OCEAN IS ON FIRE':'15連続正解！ 海が燃える、激アツ突入！'; }
-    if(kind==='oni') { title.textContent=english?'ONI FEVER!!':'鬼フィーバー!!'; subtitle.textContent=english?'20 CONSECUTIVE HITS · LEGENDARY CATCH':'20連続正解！ 伝説の鬼フィーバー突入！'; }
+    if(kind==='hot') { title.textContent=english?'SUPER HOT!':'激アツ!!'; subtitle.textContent=english?'10 CONSECUTIVE HITS · THE OCEAN IS ON FIRE':'10連続正解！ 海が燃える、激アツ突入！'; }
+    if(kind==='oni') { title.textContent=english?'ONI FEVER!!':'鬼フィーバー!!'; subtitle.textContent=english?'15 CONSECUTIVE HITS · LEGENDARY CATCH':'15連続正解！ 伝説の鬼フィーバー突入！'; }
     if(kind==='end') { title.textContent='FEVER END'; subtitle.textContent=english?'Fever over… Your stars will be taken away...':'フィーバー終了…。星を没収します、、。';
       const blackout=document.createElement('div'); blackout.className='fever-blackout'; arcadeLayer.append(blackout);
     }
@@ -2632,21 +2673,9 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     }
     banner.append(title, subtitle);
     if(kind==='unlock') { const stars=document.createElement('div'); stars.className='fever-start-stars'; stars.textContent='★ ★ ★ ★ ★'; banner.append(stars); }
-    if(kind==='oni' || kind==='cheer30' || kind==='cheer40') {
-      const character=document.createElement('img'); character.className='oni-character'; character.src=mascotImage; character.alt='笑顔でお祝いする海の魔法使い・コーラル';
-      const speech=document.createElement('div'); speech.className='oni-speech'; speech.textContent=english ? (kind==='cheer30'?'Amazing! Keep it up!':kind==='cheer40'?'Just 10 more in a row! You can do it!':'Yeaah!!') : (kind==='cheer30'?'すごーい！ その調子〜！':kind==='cheer40'?'あと１０回連続、がんばって！！':'いえーーい！！');
-      if(english && kind==='cheer40') {
-        speech.replaceChildren(document.createTextNode('Just 10 more in a row! '));
-        const encouragement=document.createElement('span');
-        encouragement.className='cheer40-encouragement';
-        encouragement.textContent='You can do it!';
-        speech.append(encouragement);
-      }
-      if(!english && kind==='cheer40') {
-        speech.replaceChildren(document.createTextNode('あと１０回連続、'));
-        const encouragement=document.createElement('span');encouragement.className='cheer40-ja';
-        encouragement.textContent='がんばって！！';speech.append(encouragement);
-      }
+    if(kind==='oni') {
+      const character=document.createElement('img');character.className='oni-character';character.src=mascotImage;character.alt=english?'Coral celebrating':'お祝いするコーラル';
+      const speech=document.createElement('div');speech.className='oni-speech';speech.textContent=english?'Yeaah!!':'いえーーい！！';
       banner.append(character,speech);
     }
     if(kind==='end') { const line=document.createElement('i'); line.className='fever-end-line'; banner.append(line); }
@@ -2666,7 +2695,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     }
     // The party timer replaces the result banner and stars together without cancelling the transition.
     if(kind==='streak20') return;
-    arcadeTimer = setTimeout(clearArcade, kind==='unlock' ? 3000 : kind==='cheer30' || kind==='cheer40' ? 5300 : kind==='oni' ? 10300 : kind==='hot' || kind==='end' ? 3600 : 2900);
+    arcadeTimer = setTimeout(clearArcade, kind==='unlock' ? 3000 : kind==='oni' ? 10300 : kind==='hot' || kind==='end' ? 3600 : 2900);
   }
   const baseShowResult = showResult;
   showResult = function(isNewAnswer = true) {
@@ -2676,15 +2705,14 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     baseShowResult(isNewAnswer);
     if (isNewAnswer) {
       const state=difficulty();
-      celebrationKind = wasHard && !state.hard ? 'end' : correct && state.correct===50 ? 'clear' : correct && state.correct===40 ? 'cheer40' : correct && state.correct===30 ? 'cheer30' : correct && state.correct===20 ? 'oni' : correct && state.correct===15 ? 'hot' : correct && !wasHard && state.hard ? 'unlock' : 'normal';
-      if(celebrationKind==='clear') scheduleGameEnding();
-      else if(celebrationKind==='cheer30' && ((game.mode==='chord' && appSettings.firstNote==='root') || (game.mode==='melody' && appSettings.melodyJazz==='off')) && arcadeEnabled && !document.hidden) beginRootChallenge();
-      else if(celebrationKind==='oni' && arcadeEnabled && !document.hidden) {
-        syncArcadeUI();
-        showArcadeResult(true, false, 'streak20');
-        scheduleOniParty();
+      celebrationKind=roundEvent==='finish'?'clear':sessionMode==='normal' && wasHard && !state.hard?'end':roundEvent;
+      if(roundEvent==='finish') scheduleGameEnding();
+      else if(roundEvent==='challenge') beginRootChallenge();
+      else if(roundEvent==='oni' && arcadeEnabled && !document.hidden){
+        syncArcadeUI();showArcadeResult(true,false,'streak20');scheduleOniParty();
+      } else if(sessionMode==='normal' || roundEvent==='endless-cheer') {
+        showArcadeResult(correct,!wasHard && state.hard,celebrationKind);
       }
-      else showArcadeResult(correct, !wasHard && state.hard, celebrationKind);
     }
     syncArcadeUI();
   };
@@ -2788,7 +2816,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   }
   // Block board and game actions in capture phase, before existing game handlers run.
   ['pointerdown','click','keydown','change'].forEach(type=>document.addEventListener(type,event=>{
-    if(!oniPartyActive && !oniPending && !endingPending && !challengeActive) return;
+    if(!oniPartyActive && !oniPending && !endingPending && !endingActive && !challengeActive) return;
     const target=event.target;
     if(target.closest('.board-shell') || target.closest('#scroll-pad') ||
       [startButton,replayButton,playChordBtn,instrumentSelect,questionTypeSelect,noteCountSelect,firstNoteControls].some(control=>control===target || control.contains(target))) {
@@ -2900,11 +2928,13 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   endingDialog.setAttribute('aria-labelledby','ending-title');
   endingDialog.setAttribute('aria-describedby','ending-invitation');
   const endingTitle=document.createElement('h2');endingTitle.id='ending-title';endingTitle.innerHTML='<span>ゲームクリア</span> <span class="ending-congratulations">おめでとう！</span>';
-  const endingBadge=document.createElement('div');endingBadge.className='ending-badge';endingBadge.textContent='★ 50 CONSECUTIVE HITS ★';
-  const endingCharacter=document.createElement('img');endingCharacter.className='ending-character';endingCharacter.src=mascotImage;endingCharacter.alt='50連続正解を祝福する海の魔法使い・コーラル';
+  const endingBadge=document.createElement('div');endingBadge.className='ending-badge';endingBadge.textContent='★ 30 QUESTIONS ★';
+  const endingCharacter=document.createElement('img');endingCharacter.className='ending-character';endingCharacter.src=mascotImage;endingCharacter.alt='海の魔法使い・コーラル';
   const invitation=document.createElement('div');invitation.id='ending-invitation';invitation.className='oni-speech';invitation.textContent='他のモードにも挑戦だ〜！';
   const endingOK=document.createElement('button');endingOK.type='button';endingOK.className='ending-ok primary-btn';endingOK.textContent='OK';
-  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,endingOK);
+  const endingStats=document.createElement('p');endingStats.className='round-results';
+  endingTitle.tabIndex=-1;
+  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
   function scheduleGameEnding() {
@@ -2923,18 +2953,28 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     endingActive=true;game.phase='complete';
     [startButton,replayButton,playChordBtn,instrumentSelect,questionTypeSelect,noteCountSelect,firstNoteControls].forEach(control=>{control.disabled=true;});
     document.body.classList.add('game-cleared');
-    endingTitle.innerHTML=appSettings.lang==='on'
-      ? '<span class="ending-congratulations">Congratulations!</span>'
-      : '<span>ゲームクリア</span> <span class="ending-congratulations">おめでとう！</span>';
-    invitation.textContent=appSettings.lang==='on'?'Try the other modes, too!':'他のモードにも挑戦だ〜！';
-    endingDialog.showModal();endingOK.focus();
-    try {playOniPartyMusic(true);}catch(error){console.warn('Ending music unavailable',error);}
+    const en=appSettings.lang==='on',endless=sessionMode==='endless',perfect=roundStats.streak===30;
+    endingBadge.textContent=endless?'★ 100 QUESTIONS COMPLETE ★':'★ 30 QUESTIONS COMPLETE ★';
+    endingTitle.innerHTML=endless?(en?'100 questions complete!':'100問おつかれさま！'):
+      perfect?(en?'Game clear — congratulations!':'ゲームクリア<span class="ending-congratulations">おめでとう！</span>'):
+      (en?'Thanks for playing 30 questions!':'30問おつかれさま！');
+    invitation.textContent=endless?(en?'I’m off to bed!\nByeeee!':'もう寝まーす！\nさ〜よ〜う〜な〜ら〜。'):
+      perfect?(en?'Try the other modes, too!':'他のモードにも挑戦だ〜！'):
+      (en?'Keep going and aim for 30 correct answers in a row♪':'30問連続正解を目指してがんばってね♪');
+    endingStats.hidden=endless || perfect;
+    endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
+    endingOK.hidden=endless;
+    endingOK.textContent=en?'Back to the start':'スタート画面に戻る';
+    endingDialog.showModal();endingTitle.focus({preventScroll:true});endingDialog.scrollTop=0;
+    // Both normal endings use the existing fanfare until the MP3 is supplied.
+    if(!endless) try {playOniPartyMusic(true);}catch(error){console.warn('Ending music unavailable',error);}
   }
+
   function returnToGameStart() {
     if(!endingActive) return;
     endingActive=false;endingPending=false;clearTimeout(endingDelayTimer);stopArcadeAudio();clearArcade();clearTimeout(judgmentTimer);
     endGesture();stopHeldNote(currentHeldPosition);activeVoices.forEach(stop=>stop());clearBoardMarks();
-    Object.values(difficultyStates).forEach(state=>{state.hard=false;state.correct=0;state.wrong=0;});
+    resetRoundProgress();
     Object.keys(feverPeaks).forEach(mode=>{feverPeaks[mode]=0;oniCompleted[mode]=false;});
     scaleDeck=[];
     game={mode:questionTypeSelect.value,phase:'idle',target:[],answers:[],titleName:'',displayKey:'',rootPitchIndex:null,chordMidiNotes:[]};
@@ -2943,7 +2983,9 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     replayButton.disabled=true;playChordBtn.disabled=true;replayButton.textContent=t('replayBtn');
     settingsPopup.classList.remove('active');
     updateUIControls();updateStartButton();setStatus(null,t('initialMsg'));setBoardScroll(0);syncArcadeUI();
-    document.body.classList.remove('game-cleared');endingDialog.close();startButton.focus();
+    document.body.classList.remove('game-cleared');endingDialog.close();
+    openingDisposed=false;openingClosing=false;openingContext=null;openingBuffer=null;openingSource=null;
+    updateListenButton();updateWelcomeText();welcomeDialog.showModal();welcomeTitle.focus({preventScroll:true});welcomeDialog.scrollTop=0;
   }
   endingOK.addEventListener('click',returnToGameStart);
 
@@ -2952,7 +2994,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   const challengeDialog=document.createElement('dialog');
   challengeDialog.className='ending-dialog challenge-dialog';
   challengeDialog.setAttribute('aria-labelledby','challenge-title');
-  challengeDialog.innerHTML='<h2 id="challenge-title" tabindex="-1" autofocus>30 COMBO!</h2>';
+  challengeDialog.innerHTML='<h2 id="challenge-title" tabindex="-1" autofocus>20 COMBO!</h2>';
   const challengeCharacter=document.createElement('img');
   challengeCharacter.className='ending-character';challengeCharacter.src=mascotImage;
   challengeCharacter.alt='海の魔法使い・コーラル';
@@ -2998,6 +3040,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     setTimeout(()=>{
       if(harder) {
         if(challengeMode==='melody') appSettings.melodyJazz='on';
+        else if(challengeMode==='scale') enableScaleSpeedBoost();
         else appSettings.firstNote='random';
         updateSettingsUI();
       }
@@ -3067,8 +3110,65 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   updateStaticTexts();
   syncArcadeUI();
 
+  function resetRoundProgress(){
+    resetScaleSpeedBoost();roundStats={total:0,correct:0,streak:0};roundEvent='normal';
+    Object.values(instrumentProgress).forEach(progress=>{
+      Object.values(progress.difficulty).forEach(state=>{state.hard=false;state.correct=0;state.wrong=0;});
+      Object.keys(progress.fever).forEach(mode=>{progress.fever[mode]=0;progress.oni[mode]=false;});
+    });
+    scaleDeck=[];updateSettingsUI();
+  }
+  const endlessCheers={
+    ja:['すご〜い！','ごい〜す〜！','ヨッ！大統領！','びっくりケロリンパ！','ドキッチョモグたん！','うりゅたりほー！','海の底まで大喝采！','魔法よりミラクル！','もはや海の伝説〜！'],
+    en:['Amaaaazing!','Super-duper awesome!','Hail to the chief!','Jumping jellyfish!','Holy moly, magic macaroni!','Yodel-ay-hee-hoo!','The whole ocean applauds!','More magical than magic!','You’re an ocean legend!']
+  };
+  function showCoralCheer(kind){
+    const en=appSettings.lang==='on';
+    const banner=document.createElement('div');banner.className='arcade-banner coral-cheer';
+    const portrait=document.createElement('div');portrait.className='coral-portrait';
+    const img=document.createElement('img');img.src=mascotImage;img.alt=en?'Coral cheering you on':'応援するコーラル';portrait.append(img);
+    const title=document.createElement('strong');
+    title.textContent=en?`${roundStats.streak} correct in a row`:`${roundStats.streak}問連続正解`;
+    const speech=document.createElement('div');speech.className='oni-speech';
+    speech.textContent=kind==='cheer25'?(en?'Just 5 more! You can do it!':'あと5問、がんばって！'):
+      endlessCheers[en?'en':'ja'][roundStats.streak/10-1];
+    banner.append(portrait,title,speech);arcadeLayer.append(banner);
+    arcadeTimer=setTimeout(clearArcade,4200);
+  }
+  function playWarpJingle(){
+    if(appSettings.sound!=='exists') return;
+    const Context=window.AudioContext || window.webkitAudioContext;
+    if(!Context) return;
+    let ctx;
+    try{
+      ctx=new Context({latencyHint:'interactive'});ctx.resume().catch(()=>{});
+      const master=ctx.createGain();master.gain.value=.20;master.connect(ctx.destination);
+      const now=ctx.currentTime+.02;
+      // A circling shimmer rises, then dives into a low underwater resonance.
+      [0,.12,.24,.36,.48].forEach((offset,index)=>{
+        const osc=ctx.createOscillator(),gain=ctx.createGain();
+        osc.type='sine';osc.frequency.setValueAtTime(523.25*2**(index/6),now+offset);
+        osc.frequency.exponentialRampToValueAtTime(180+index*24,now+offset+.75);
+        gain.gain.setValueAtTime(0,now+offset);gain.gain.linearRampToValueAtTime(.30,now+offset+.035);
+        gain.gain.exponentialRampToValueAtTime(.0001,now+offset+.85);
+        const pan=ctx.createStereoPanner?ctx.createStereoPanner():null;
+        if(pan){pan.pan.setValueAtTime(index%2?-.8:.8,now+offset);pan.pan.linearRampToValueAtTime(index%2?.8:-.8,now+offset+.75);osc.connect(gain).connect(pan).connect(master);}
+        else osc.connect(gain).connect(master);
+        osc.start(now+offset);osc.stop(now+offset+.9);
+      });
+      const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*1.35),ctx.sampleRate),data=buffer.getChannelData(0);
+      for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
+      const noise=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+      noise.buffer=buffer;filter.type='bandpass';filter.Q.value=3;
+      filter.frequency.setValueAtTime(2400,now);filter.frequency.exponentialRampToValueAtTime(120,now+1.3);
+      gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.24,now+.30);gain.gain.linearRampToValueAtTime(0,now+1.35);
+      noise.connect(filter).connect(gain).connect(master);noise.start(now);
+      setTimeout(()=>ctx.close().catch(()=>{}),1800);
+    }catch(error){if(ctx)ctx.close().catch(()=>{});}
+  }
   const welcomeDialog=document.createElement('dialog');welcomeDialog.className='coral-welcome';
   welcomeDialog.setAttribute('aria-labelledby','coral-welcome-title');
+  welcomeDialog.addEventListener('cancel',event=>event.preventDefault());
   const welcomeCoral=document.createElement('img');welcomeCoral.src=mascotImage;
   const welcomeTitle=document.createElement('h2');welcomeTitle.id='coral-welcome-title';welcomeTitle.tabIndex=-1;
   const welcomeListen=document.createElement('button');welcomeListen.type='button';welcomeListen.className='welcome-listen';
@@ -3077,6 +3177,14 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   const welcomeJapanese=document.createElement('button');welcomeJapanese.type='button';welcomeJapanese.textContent='日本語';
   const welcomeEnglish=document.createElement('button');welcomeEnglish.type='button';welcomeEnglish.textContent='English';
   welcomeLanguages.append(welcomeJapanese,welcomeEnglish);
+  const welcomeModes=document.createElement('div');welcomeModes.className='welcome-modes';welcomeModes.setAttribute('role','group');
+  const normalModeButton=document.createElement('button'),endlessModeButton=document.createElement('button');
+  normalModeButton.type=endlessModeButton.type='button';
+  welcomeModes.append(normalModeButton,endlessModeButton);
+  const welcomeModeNote=document.createElement('small');welcomeModeNote.className='welcome-mode-note';
+  function chooseSessionMode(mode){sessionMode=mode;resetRoundProgress();updateWelcomeText();syncArcadeUI();updateDeckCounterDisplay();}
+  normalModeButton.addEventListener('click',()=>chooseSessionMode('normal'));
+  endlessModeButton.addEventListener('click',()=>chooseSessionMode('endless'));
   const welcomeStart=document.createElement('button');welcomeStart.type='button';welcomeStart.className='primary-btn';
   function updateWelcomeText(){
     const en=appSettings.lang==='on';
@@ -3086,14 +3194,19 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     welcomeLanguages.setAttribute('aria-label',en?'Language':'言語');
     welcomeJapanese.setAttribute('aria-pressed',String(!en));welcomeEnglish.setAttribute('aria-pressed',String(en));
     welcomeStart.textContent=en?'Start Game':'ゲームを始める';
+    welcomeModes.setAttribute('aria-label',en?'Play mode':'プレイモード');
+    normalModeButton.textContent=en?'Normal':'通常';endlessModeButton.textContent=en?'Marathon':'ひたすら';
+    normalModeButton.setAttribute('aria-pressed',String(sessionMode==='normal'));
+    endlessModeButton.setAttribute('aria-pressed',String(sessionMode==='endless'));
+    welcomeModeNote.textContent=sessionMode==='normal'?(en?'30 questions · Aim for 30 correct in a row!':'全30問 · 30問連続正解を目指してがんばってね♪'):(en?'100 questions · Coral cheers you on every 10 in a row!':'全100問 · 10連続正解ごとにコーラルが応援するよ！');
   }
   function selectWelcomeLanguage(lang){
     appSettings.lang=lang;updateSettingsUI();updateStaticTexts();syncArcadeUI();updateWelcomeText();updateListenButton();
   }
   welcomeJapanese.addEventListener('click',()=>selectWelcomeLanguage('off'));
   welcomeEnglish.addEventListener('click',()=>selectWelcomeLanguage('on'));
-  welcomeStart.addEventListener('click',()=>{welcomeDialog.close();startButton.focus();});
-  welcomeDialog.append(welcomeCoral,welcomeTitle,welcomeListen,welcomeMessage,welcomeLanguages,welcomeStart);document.body.append(welcomeDialog);
+  welcomeStart.addEventListener('click',()=>{playWarpJingle();welcomeDialog.close();syncArcadeUI();startButton.focus();});
+  welcomeDialog.append(welcomeCoral,welcomeTitle,welcomeListen,welcomeMessage,welcomeLanguages,welcomeModes,welcomeModeNote,welcomeStart);document.body.append(welcomeDialog);
   updateWelcomeText();welcomeDialog.showModal();welcomeTitle.focus({preventScroll:true});welcomeDialog.scrollTop=0;
   // Prepare PCM in memory without an AudioContext or any autoplay attempt.
   // This avoids fetching/decoding delays in the first iPhone tap.
@@ -3181,7 +3294,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   }
   welcomeListen.addEventListener('click',startOpeningMusic);
   welcomeStart.addEventListener('click',fadeOpeningMusic);
-  welcomeDialog.addEventListener('close',fadeOpeningMusic,{once:true});
+  welcomeDialog.addEventListener('close',fadeOpeningMusic);
   document.addEventListener('visibilitychange',handleOpeningVisibility);
   window.addEventListener('pagehide',disposeOpeningMusic);
   updateListenButton();
