@@ -582,7 +582,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 .welcome-languages button{font-size:16px;padding:10px 18px;}
 .welcome-languages button[aria-pressed="true"]{border-color:#ffe38c;color:#ffe99b;background:#17466b;}
 .coral-welcome .primary-btn{display:block;width:100%;margin-top:20px;min-height:46px;}
-#coral-welcome-title:focus{outline:none;}
+#coral-welcome-title:focus,#challenge-title:focus{outline:none;}
 </style>
 </head>
 <body>
@@ -2950,7 +2950,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
   const challengeDialog=document.createElement('dialog');
   challengeDialog.className='ending-dialog challenge-dialog';
   challengeDialog.setAttribute('aria-labelledby','challenge-title');
-  challengeDialog.innerHTML='<h2 id="challenge-title">30 COMBO!</h2>';
+  challengeDialog.innerHTML='<h2 id="challenge-title" tabindex="-1" autofocus>30 COMBO!</h2>';
   const challengeCharacter=document.createElement('img');
   challengeCharacter.className='ending-character';challengeCharacter.src=mascotImage;
   challengeCharacter.alt='海の魔法使い・コーラル';
@@ -2983,7 +2983,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
     controls.forEach(control=>{control.disabled=true;});
     setTimeout(()=>{
       if(!challengeActive) return;
-      challengeDialog.showModal();challengeYes.focus();
+      challengeDialog.showModal();challengeDialog.querySelector('#challenge-title').focus({preventScroll:true});
     },1000);
   }
   function answerRootChallenge(harder) {
