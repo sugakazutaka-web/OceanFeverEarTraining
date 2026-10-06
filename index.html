@@ -3155,7 +3155,7 @@ body.endless-mode .streak-stars{display:none!important;}
       const buffer=ctx.createBuffer(2,warpFrames,44100);
       buffer.copyToChannel(warpChannels[0],0);buffer.copyToChannel(warpChannels[1],1);
       const source=ctx.createBufferSource(),gain=ctx.createGain();
-      source.buffer=buffer;source.loop=false;gain.gain.value=.4;
+      source.buffer=buffer;source.loop=false;gain.gain.value=.32;
       source.connect(gain).connect(ctx.destination);
       source.onended=()=>{source.disconnect();gain.disconnect();ctx.close().catch(()=>{});};
       source.start(ctx.currentTime+.015);
