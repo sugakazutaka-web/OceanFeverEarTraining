@@ -363,10 +363,6 @@ body.oni-party #arcade-fx:before { content:''; position:absolute; inset:0; z-ind
 }
 
 
-.arcade-banner.cheer { top:8%; width:min(650px,92vw); background:linear-gradient(135deg,#673b76f0,#185572f5); animation:prize-in 5.2s ease both;}
-.arcade-banner.cheer strong { font-size:clamp(30px,4.5vw,54px);}
-.arcade-banner.cheer .oni-character { width:min(300px,35vh); height:min(300px,35vh);}
-.arcade-banner.cheer .oni-speech { font-size:clamp(17px,2.8vw,29px);}
 .ending-dialog { width:min(760px,94vw); max-height:94dvh; overflow-y:auto; padding:20px 30px; text-align:center; color:#fff1ae; border:3px solid #ffe8a3; border-radius:26px; background:radial-gradient(ellipse at 50% 45%,#416bb1aa,transparent 65%),linear-gradient(135deg,#672e6d,#142c66 65%,#095469); box-shadow:0 0 70px #f9aceb66;}
 .ending-dialog::backdrop { background:#02051cd9;}
 .ending-badge { font-size:12px; letter-spacing:3px; color:#ffda91;}
@@ -374,9 +370,7 @@ body.oni-party #arcade-fx:before { content:''; position:absolute; inset:0; z-ind
 .ending-character { display:block; width:min(460px,49vh); height:min(460px,49vh); object-fit:contain; margin:0 auto; filter:drop-shadow(0 0 25px #b6eaff77);}
 .ending-dialog .oni-speech { font-size:clamp(17px,2.8vw,29px); padding:8px 18px;}
 .ending-ok { display:block; width:min(260px,90%); min-height:48px; margin:16px auto 0; font-size:18px;}
-.ending-mute { display:block; min-height:32px; padding:4px 10px; margin:8px auto 0; font-size:11px; border-color:#88b5d366; color:#c0dfed; background:#051b3955;}
 @media(max-height:650px) and (orientation:landscape) { .ending-dialog {padding:12px 24px;} .ending-character {width:42vh;height:42vh;} .ending-ok {margin-top:10px;min-height:42px;} .ending-dialog h2 {font-size:28px;margin-top:6px;} }
-@media(prefers-reduced-motion:reduce) { .arcade-banner.cheer {animation:none;} }
 
 
 .arcade-banner.fever-start {width:min(560px,94vw);padding:22px 26px;}
@@ -433,7 +427,6 @@ body.fever-oni .instrument {background:linear-gradient(130deg,#285972,#304e72);}
 #deck-counter,#deck-counter.hard-mode {justify-content:space-between;}
 #deck-counter .streak-stars {display:flex;}
 
-.oni-speech .cheer40-encouragement {display:block;white-space:nowrap;}
 
 /* Shared instrument selector and a six-string board with full-size touch rows. */
 #instrument-group {flex:1;min-width:80px;}
@@ -572,7 +565,6 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 .fever-coral{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:clamp(86px,16vh,132px);aspect-ratio:1;filter:drop-shadow(0 3px 6px #001a3655);}
 .arcade-banner.fever-start,.arcade-banner.hot{top:max(25%,calc(clamp(86px,16vh,132px) + 20px));}
 .ending-dialog:not(.challenge-dialog) .ending-character{width:min(460px,49vh,100%);height:auto;aspect-ratio:1;margin-inline:auto;}
-@media(orientation:portrait){.cheer40-ja{display:block;}}
 .coral-welcome{box-sizing:border-box;width:min(540px,calc(100vw - 28px));max-height:90dvh;overflow:auto;padding:24px;text-align:center;color:#fff;border:2px solid #ffe38c;border-radius:22px;background:linear-gradient(145deg,#0b4264,#061632);}
 .coral-welcome::backdrop{background:#02091fd9;}
 .coral-welcome>img{width:140px;height:140px;object-fit:contain;}
@@ -2747,7 +2739,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     clearArcade();
     if (!arcadeEnabled || document.hidden) return;
     if(kind==='cheer25'){showNormal25Cheer();return;}
-    if(kind==='endless-cheer'){showCoralCheer(kind);return;}
+    if(kind==='endless-cheer'){showCoralCheer();return;}
     if(sessionMode==='endless') return;
     const english = appSettings.lang === 'on';
     const banner = document.createElement('div');
@@ -3320,7 +3312,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     wrapPopupJapanese(speech);
     banner.append(title,image,speech);arcadeLayer.append(backdrop,banner);arcadeTimer=setTimeout(clearArcade,5300);
   }
-  function showCoralCheer(kind){
+  function showCoralCheer(){
     const en=appSettings.lang==='on';
     const banner=document.createElement('div');banner.className='arcade-banner coral-cheer';
     const portrait=document.createElement('div');portrait.className='coral-portrait';
@@ -3328,9 +3320,8 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     const title=document.createElement('strong');
     title.textContent=en?`${roundStats.streak} correct in a row`:`${roundStats.streak}問連続正解`;
     const speech=document.createElement('div');speech.className='oni-speech';
-    speech.textContent=kind==='cheer25'?(en?'Just 5 more! You can do it!':'あと5問、がんばって！'):
-      endlessCheers[en?'en':'ja'][roundStats.streak/10-1];
-    if(!en) appendCheerPhrases(speech,kind==='cheer25'?['あと5問、','がんばって！']:endlessCheerPhrases[roundStats.streak/10-1]);
+    speech.textContent=endlessCheers[en?'en':'ja'][roundStats.streak/10-1];
+    if(!en) appendCheerPhrases(speech,endlessCheerPhrases[roundStats.streak/10-1]);
     banner.append(portrait,title,speech);arcadeLayer.append(banner);
     arcadeTimer=setTimeout(clearArcade,2500);
   }
