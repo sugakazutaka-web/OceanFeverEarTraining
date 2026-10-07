@@ -646,6 +646,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   .header-effects #power-toggle,.header-effects #fx-toggle{min-height:36px;}
 }
 .coral-cheer .cheer-phrase{display:inline-block;white-space:nowrap;word-break:normal;overflow-wrap:normal;}
+.popup-phrase{display:inline-block;white-space:nowrap;word-break:normal;overflow-wrap:normal;}
 </style>
 </head>
 <body>
@@ -2770,6 +2771,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       character.alt=english?'Coral, the sea magician':'海の魔法使い・コーラル';
       portrait.append(character);banner.append(portrait);
     }
+    wrapPopupJapanese(subtitle);
     banner.append(title, subtitle);
     if(kind==='unlock') { const stars=document.createElement('div'); stars.className='fever-start-stars'; stars.textContent='★ ★ ★ ★ ★'; banner.append(stars); }
     if(kind==='oni') {
@@ -3077,6 +3079,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     invitation.textContent=endless?(en?'I’m off to bed!\nByeeee!':'もう寝まーす！\nさ〜よ〜う〜な〜ら〜。'):
       perfect?(en?'Try the other modes, too!':'他のモードにも挑戦だ〜！'):
       (en?'Keep going and aim for 30 correct answers in a row♪':'30問連続正解を目指してがんばってね♪');
+    if(!endless){wrapPopupJapanese(invitation);if(!perfect)wrapPopupJapanese(endingTitle);}
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
     endingOK.hidden=endless;
@@ -3147,6 +3150,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     challengeMode=game.mode;
     challengeDialog.classList.remove('challenge-reply');
     challengeSpeech.textContent=appSettings.lang==='on'?'Was that a little too easy?':'ちょっと簡単すぎたかなぁ？';
+    wrapPopupJapanese(challengeSpeech);
     challengeYes.textContent=appSettings.lang==='on'?'Yes':'はい';
     challengeNo.textContent=appSettings.lang==='on'?'No':'いいえ';
     challengeChoices.hidden=false;
@@ -3167,6 +3171,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     challengeYes.disabled=challengeNo.disabled=true;
     challengeChoices.hidden=true;
     challengeSpeech.textContent=appSettings.lang==='on' ? (harder?'Then try this!':"You're on a roll! Keep it up!") : (harder?'じゃあ、これはどうだ～！':'その調子でがんばって！');
+    wrapPopupJapanese(challengeSpeech);
     setTimeout(()=>{
       if(generation!==gameGeneration || !challengeActive) return;
       if(harder && sessionMode==='normal') {
@@ -3284,6 +3289,26 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       speech.append(span);
     });
   }
+  // Explicit phrase boundaries keep Japanese popup copy readable at every viewport width.
+  function wrapPopupJapanese(element){
+    if(appSettings.lang==='on') return;
+    const boundaries=['お見事！ ','音をキャッチ！ · ','惜しい！ ','もう一度、','5連続正解！ ','フィーバータイム、','問題が','10連続正解！ ','海が燃える、','15連続正解！ ','伝説の','フィーバー終了…。','ちょっと','じゃあ、','その調子で','他のモードにも','30問連続正解を','目指して','今日も海の底で、','私と一緒に','イヤートレーニング','全30問 · ','全100問 · ','10連続正解ごとに','コーラルが','30問','100問'];
+    let text=element.textContent;
+    // Prefer the longest boundary at a given position (e.g. 30問連続正解を before 30問).
+    const parts=[];let from=0;
+    for(let i=0;i<text.length;){
+      if(text[i]==='\n'){if(i>from)parts.push(text.slice(from,i));parts.push('\n');i++;from=i;continue;}
+      const match=boundaries.find(phrase=>text.startsWith(phrase,i));
+      if(match){i+=match.length;parts.push(text.slice(from,i));from=i;}else i++;
+    }
+    if(from<text.length)parts.push(text.slice(from));
+    element.replaceChildren();
+    parts.forEach((part,index)=>{
+      if(part==='\n'){element.append(document.createElement('br'));return;}
+      if(index && parts[index-1]!=='\n')element.append(document.createElement('wbr'));
+      const span=document.createElement('span');span.className='popup-phrase';span.textContent=part;element.append(span);
+    });
+  }
   function showNormal25Cheer(){
     const en=appSettings.lang==='on';
     const backdrop=document.createElement('div');backdrop.className='cheer25-backdrop';
@@ -3292,6 +3317,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     const image=document.createElement('img');image.className='ending-character';image.src=mascotImage;image.alt=en?'Coral cheering you on':'応援するコーラル';
     const speech=document.createElement('div');speech.className='oni-speech';
     speech.textContent=en?'Just 5 more in a row!\nYou can do it!':'あと5回連続、\nがんばって！';
+    wrapPopupJapanese(speech);
     banner.append(title,image,speech);arcadeLayer.append(backdrop,banner);arcadeTimer=setTimeout(clearArcade,5300);
   }
   function showCoralCheer(kind){
@@ -3344,6 +3370,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     normalModeButton.setAttribute('aria-pressed',String(sessionMode==='normal'));
     endlessModeButton.setAttribute('aria-pressed',String(sessionMode==='endless'));
     welcomeModeNote.textContent=sessionMode==='normal'?(en?'30 questions · Aim for 30 correct in a row!':'全30問 · 30問連続正解を目指してがんばってね♪'):(en?'100 questions · Coral cheers you on every 10 in a row!':'全100問 · 10連続正解ごとにコーラルが応援するよ！');
+    wrapPopupJapanese(welcomeMessage);wrapPopupJapanese(welcomeModeNote);
   }
   function selectWelcomeLanguage(lang){
     appSettings.lang=lang;updateSettingsUI();updateStaticTexts();syncArcadeUI();updateWelcomeText();updateListenButton();updateResetLabels();
