@@ -645,6 +645,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   .header-effects{grid-column:1/-1;grid-row:2;justify-content:flex-end;gap:8px;}
   .header-effects #power-toggle,.header-effects #fx-toggle{min-height:36px;}
 }
+.coral-cheer .cheer-phrase{display:inline-block;white-space:nowrap;word-break:normal;overflow-wrap:normal;}
 </style>
 </head>
 <body>
@@ -3263,6 +3264,26 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     ja:['すごーい！','ご〜いす〜！','イルカもジャンプで大拍手！','ラッコもびっくり、貝を落とした！','マンタも宙返りでお祝い！','タコも八本足で拍手〜！','クジラも歌うよ、ブラボー！','海の底まで、どよめきドーン！','幻のダイオウイカも認めた！超レア級！'],
     en:['Amaaaazing!','Super-duper awesome!','Even the dolphins leap and cheer!','The sea otter dropped its shell in amazement!','Even the manta rays do flips to celebrate!','Eight arms of applause from the octopus!','Even the whales sing bravo!','The whole ocean roars for you!','The elusive giant squid approves! Super rare!']
   };
+  // Keep Japanese phrases intact; wrap only between meaningful chunks when needed.
+  const endlessCheerPhrases=[
+    ['すごーい！'],
+    ['ご〜いす〜！'],
+    ['イルカもジャンプで','大拍手！'],
+    ['ラッコもびっくり、','貝を落とした！'],
+    ['マンタも宙返りで','お祝い！'],
+    ['タコも八本足で','拍手〜！'],
+    ['クジラも歌うよ、','ブラボー！'],
+    ['海の底まで、','どよめきドーン！'],
+    ['幻のダイオウイカも','認めた！','超レア級！']
+  ];
+  function appendCheerPhrases(speech,phrases){
+    speech.textContent='';
+    phrases.forEach((phrase,index)=>{
+      if(index) speech.append(document.createElement('wbr'));
+      const span=document.createElement('span');span.className='cheer-phrase';span.textContent=phrase;
+      speech.append(span);
+    });
+  }
   function showNormal25Cheer(){
     const en=appSettings.lang==='on';
     const backdrop=document.createElement('div');backdrop.className='cheer25-backdrop';
@@ -3283,6 +3304,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     const speech=document.createElement('div');speech.className='oni-speech';
     speech.textContent=kind==='cheer25'?(en?'Just 5 more! You can do it!':'あと5問、がんばって！'):
       endlessCheers[en?'en':'ja'][roundStats.streak/10-1];
+    if(!en) appendCheerPhrases(speech,kind==='cheer25'?['あと5問、','がんばって！']:endlessCheerPhrases[roundStats.streak/10-1]);
     banner.append(portrait,title,speech);arcadeLayer.append(banner);
     arcadeTimer=setTimeout(clearArcade,2500);
   }
