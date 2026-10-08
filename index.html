@@ -2860,7 +2860,8 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       const melody=startFromG?[79,84,88,91]:[72,76,79,84,79,84,88,91];
       const shift=startFromG?4*.085:0;
       melody.forEach((note,i)=>tone(note,i*.085,.22,'triangle',.3));
-      [60,64,67,72].forEach(note=>tone(note,.69-shift,.75,'triangle',.21));
+      // Leave the fifth event silent in the welcome jingle; keep the next notes on time.
+      if(!startFromG) [60,64,67,72].forEach(note=>tone(note,.69-shift,.75,'triangle',.21));
       [96,91,88,84].forEach((note,i)=>tone(note,.82-shift+i*.1,.28,'sine',.18));
     } else {
       [67,63,58].forEach((note,i)=>tone(note,i*.15,.27,'triangle',.35,note-3));
@@ -2940,14 +2941,17 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     function schedule(){
       while(!stopped && cycle+endlessEndingNotes[index][1]<ctx.currentTime+.3){
         const [midi,offset,duration]=endlessEndingNotes[index],at=cycle+offset;
-        // Same triangle oscillator, attack, decay and level as the clear melody.
-        const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='triangle';
-        osc.frequency.setValueAtTime(440*2**((midi-69)/12),at);
-        gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.22,at+.008);
-        gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
-        osc.connect(gain).connect(master);sources.add(osc);
-        osc.onended=()=>{sources.delete(osc);osc.disconnect();gain.disconnect();};
-        osc.start(at);osc.stop(at+duration+.02);
+        // A delicate music-box strike: a sine fundamental and a quiet, short overtone.
+        const hz=440*2**((midi-69)/12),ring=Math.min(duration,2.4);
+        [[1,.22,ring],[3,.025,Math.min(ring,.35)]].forEach(([ratio,level,decay])=>{
+          const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';
+          osc.frequency.setValueAtTime(hz*ratio,at);
+          gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(level,at+.004);
+          gain.gain.exponentialRampToValueAtTime(.0001,at+decay);
+          osc.connect(gain).connect(master);sources.add(osc);
+          osc.onended=()=>{sources.delete(osc);osc.disconnect();gain.disconnect();};
+          osc.start(at);osc.stop(at+decay+.02);
+        });
         if(++index===endlessEndingNotes.length){index=0;cycle+=endlessEndingPeriod;}
       }
     }
@@ -3068,18 +3072,8 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   const endingOK=document.createElement('button');endingOK.type='button';endingOK.className='ending-ok primary-btn';endingOK.textContent='OK';
   const endingStats=document.createElement('p');endingStats.className='round-results';
   endingTitle.tabIndex=-1;
-  const endingExit=document.createElement('button');endingExit.type='button';endingExit.className='ending-ok primary-btn';endingExit.hidden=true;
   const endingCloseNote=document.createElement('p');endingCloseNote.className='ending-close-note';endingCloseNote.hidden=true;endingCloseNote.setAttribute('role','status');
-  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,endingStats,endingOK,endingExit,endingCloseNote);
-  function exitEndlessGame(){
-    stopArcadeAudio();activeVoices.forEach(stop=>stop());
-    invitation.textContent=appSettings.lang==='on'?'Good night!':'おやすみなさい。';
-    endingCloseNote.textContent=appSettings.lang==='on'?'Please close this game tab or window.':'ゲーム画面を閉じてください。';
-    // A browser may refuse to close a tab opened by the user. Keep a visible fallback.
-    endingCloseNote.hidden=false;
-    try{window.close();}catch(error){}
-  }
-  endingExit.addEventListener('click',exitEndlessGame);
+  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,endingCloseNote,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
   function scheduleGameEnding() {
@@ -3105,16 +3099,15 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     endingTitle.innerHTML=endless?(en?'100 questions complete!':'100問おつかれさま！'):
       perfect?(en?'Game clear — congratulations!':'ゲームクリア<span class="ending-congratulations">おめでとう！</span>'):
       (en?'Thanks for playing 30 questions!':'30問おつかれさま！');
-    invitation.textContent=endless?(en?'I’m off to bed!\nByeeee!':'もう寝まーす！\nさ〜よ〜う〜な〜ら〜。'):
+    invitation.textContent=endless?(en?'That’s all for today.\nI’m off to bed now.\nGood night!':'今日はここまで。\n私はもう寝ま〜す。\nおやすみなさい。'):
       perfect?(en?'Try the other modes, too!':'他のモードにも挑戦だ〜！'):
       (en?'Keep going and aim for 30 correct answers in a row♪':'30問連続正解を目指してがんばってね♪');
     if(!endless){wrapPopupJapanese(invitation);if(!perfect)wrapPopupJapanese(endingTitle);}
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
     endingOK.hidden=endless;
-    endingExit.hidden=!endless;
-    endingExit.textContent=en?'Exit game':'ゲームを終了する';
-    endingCloseNote.hidden=true;
+    endingCloseNote.textContent=en?'Please close the game screen.':'ゲーム画面を閉じてください。';
+    endingCloseNote.hidden=!endless;
     endingOK.textContent=en?'Back to the start':'スタート画面に戻る';
     endingDialog.showModal();endingTitle.focus({preventScroll:true});endingDialog.scrollTop=0;
     // Both normal endings use the existing fanfare until the MP3 is supplied.
