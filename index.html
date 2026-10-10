@@ -400,8 +400,8 @@ body.page-hidden *,body.page-hidden *:before,body.page-hidden *:after {animation
 .challenge-choices button {min-width:110px;font-size:18px;}
 /* Compact 30-hit invitation, independently sized from the game ending. */
 .challenge-dialog {width:min(480px,92vw);padding:16px 20px;max-height:90dvh;}
-.challenge-dialog h2,.arcade-banner.oni .combo-title {font-size:clamp(24px,4vw,32px);margin:0;}
-.arcade-banner.oni .combo-title{font-family:inherit;font-weight:700;color:#fff0a5;line-height:1.3;text-shadow:0 3px #a06827,0 0 18px #ffd66466;margin-top:8px;}
+.challenge-dialog h2 {font-size:clamp(24px,4vw,32px);margin:0;}
+
 .challenge-dialog .ending-character {width:min(240px,30vh);height:min(240px,30vh);}
 .challenge-dialog.challenge-reply .ending-character {width:min(270px,34vh);height:min(270px,34vh);}
 .challenge-dialog .oni-speech {font-size:clamp(16px,3.5vw,22px);padding:8px 12px;}
@@ -640,6 +640,12 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 }
 .coral-cheer .cheer-phrase{display:inline-block;white-space:nowrap;word-break:normal;overflow-wrap:normal;}
 .popup-phrase{display:inline-block;white-space:nowrap;word-break:normal;overflow-wrap:normal;}
+
+/* Keep the ONI headline and Coral prominent without an extra combo heading. */
+.arcade-banner.oni strong{font-size:clamp(34px,6vw,64px);line-height:1.2;}
+.oni-party .oni-character{width:min(360px,42vh);height:min(360px,42vh);}
+.arcade-banner.oni .oni-speech{white-space:pre-line;line-height:1.3;}
+#arcade-fx .oni-intro-star{animation:treasure-fall 1.46s linear both;animation-delay:0s;}
 </style>
 </head>
 <body>
@@ -2747,15 +2753,14 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     const banner = document.createElement('div');
     banner.className = 'arcade-banner' + (kind === 'unlock' ? ' fever-start' : kind === 'end' ? ' fever-end' : kind === 'oni' ? ' oni' : kind === 'hot' ? ' hot' : correct ? '' : ' miss');
     const title = document.createElement('strong');
-    const subtitle = document.createElement(kind==='oni'?'h2':'small');
-    if(kind==='oni') subtitle.className='combo-title';
+    const subtitle = document.createElement('small');
     title.textContent = correct ? (unlocked ? '★ FEVER ★' : '★ GREAT! ★') : 'TRY AGAIN';
     subtitle.textContent = correct
       ? (unlocked ? (english ? '5 IN A ROW · HARD MODE UNLOCKED' : '5連続正解！ HARD MODE 突入！') : (english ? 'PERFECT CATCH! · ' : 'お見事！ 音をキャッチ！ · ') + difficulty().correct + (english ? ' STREAK' : ' 連続正解'))
       : (english ? 'Listen again. Your next catch awaits.' : '惜しい！ もう一度、音を聴いてみよう');
     if(kind==='unlock') { title.textContent='FEVER START!'; subtitle.textContent=english?'5 IN A ROW · LET THE FEVER BEGIN!\nQuestions get a little harder!':'5連続正解！ フィーバータイム、スタート！\n問題が少し難しくなるよ。'; }
     if(kind==='hot') { title.textContent=english?'SUPER HOT!':'激アツ!!'; subtitle.textContent=english?'10 CONSECUTIVE HITS · THE OCEAN IS ON FIRE':'10連続正解！ 海が燃える、激アツ突入！'; }
-    if(kind==='oni') { title.textContent=english?'ONI FEVER!!':'鬼フィーバー!!'; subtitle.textContent='15 COMBO!'; }
+    if(kind==='oni') { title.textContent=english?'ONI FEVER!!':'鬼フィーバー!!'; subtitle.textContent=''; }
     if(kind==='end') { title.textContent='FEVER END'; subtitle.textContent=english?'Fever over… Your stars will be taken away...':'フィーバー終了…。星を没収します、、。';
       const blackout=document.createElement('div'); blackout.className='fever-blackout'; arcadeLayer.append(blackout);
     }
@@ -2767,11 +2772,12 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       portrait.append(character);banner.append(portrait);
     }
     wrapPopupJapanese(subtitle);
-    banner.append(title, subtitle);
+    banner.append(title);
+    if(kind!=='oni') banner.append(subtitle);
     if(kind==='unlock') { const stars=document.createElement('div'); stars.className='fever-start-stars'; stars.textContent='★ ★ ★ ★ ★'; banner.append(stars); }
     if(kind==='oni') {
       const character=document.createElement('img');character.className='oni-character';character.src=mascotImage;character.alt=english?'Coral celebrating':'お祝いするコーラル';
-      const speech=document.createElement('div');speech.className='oni-speech';speech.textContent=english?'Yeaah!!':'いえーーい！！';
+      const speech=document.createElement('div');speech.className='oni-speech';speech.textContent=english?'15 COMBO\nLet’s party!!':'15 COMBO の\nお祭りだー!!';
       banner.append(character,speech);
     }
     if(kind==='end') { const line=document.createElement('i'); line.className='fever-end-line'; banner.append(line); }
@@ -2805,7 +2811,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       if(roundEvent==='finish') scheduleGameEnding();
       else if(roundEvent==='challenge') beginRootChallenge();
       else if(roundEvent==='oni' && arcadeEnabled && !document.hidden){
-        syncArcadeUI();showArcadeResult(true,false,'streak20');scheduleOniParty();
+        clearArcade();scheduleOniParty();
       } else if(sessionMode==='normal' || roundEvent==='endless-cheer') {
         showArcadeResult(correct,!wasHard && state.hard,celebrationKind);
       }
@@ -2813,8 +2819,11 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     syncArcadeUI();
   };
   // A short synthesized fanfare / descending arcade effect, with a bounded master gain.
-  function playJudgmentSound(correct, startFromG = false) {
-    if (appSettings.sound !== 'exists' || document.hidden) return;
+  function playJudgmentSound(correct, startFromG = false, onComplete = null) {
+    if (appSettings.sound !== 'exists' || document.hidden) {
+      if(onComplete) oniDelayTimer=setTimeout(onComplete,1460);
+      return;
+    }
     stopArcadeAudio();
     const ctx = ensureAudio();
     const master = ctx.createGain();
@@ -2823,6 +2832,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     limiter.threshold.value = -16; limiter.knee.value = 12; limiter.ratio.value = 8;
     master.connect(limiter).connect(ctx.destination);
     const voices = [];
+    let endedVoices=0;
     let disposed = false;
     let cleanup;
     function stop() {
@@ -2846,7 +2856,10 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       gain.gain.exponentialRampToValueAtTime(level,now+offset+.012);
       gain.gain.exponentialRampToValueAtTime(.0001,now+offset+duration);
       osc.connect(gain).connect(master);
-      osc.onended=()=>{osc.disconnect();gain.disconnect();};
+      osc.onended=()=>{
+        osc.disconnect();gain.disconnect();endedVoices++;
+        if(!disposed && onComplete && endedVoices===voices.length) onComplete();
+      };
       osc.start(now+offset);osc.stop(now+offset+duration+.02);voices.push(osc);
     }
     if (!startFromG && celebrationKind === 'end') {
@@ -2875,17 +2888,29 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 
   function scheduleOniParty() {
     oniPending=true;
+    clearTimeout(judgmentTimer);
     const controls=[startButton,replayButton,playChordBtn,instrumentSelect,questionTypeSelect,noteCountSelect,firstNoteControls];
     oniSavedControls=controls.map(control=>[control,control.disabled]);
     controls.forEach(control=>{control.disabled=true;});
-    oniDelayTimer=setTimeout(()=>{
+    syncArcadeUI();
+    // One horizontal row starts with the correct-answer sound, without a result banner.
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      const count=lowPower?12:24;
+      for(let i=0;i<count;i++){
+        const star=document.createElement('span');star.className='arcade-particle oni-intro-star';star.textContent='★';
+        star.style.cssText=`--x:${(i+.5)*100/count}%;--size:24px;--delay:0s;color:#ffe087`;
+        arcadeLayer.append(star);
+      }
+    }
+    const complete=()=>{
       if(!oniPending) return;
       finishOniParty();
       if(!arcadeEnabled || document.hidden) return;
       showArcadeResult(true,false,'oni');
       beginOniParty();
       syncArcadeUI();
-    },3250); // Last star: 2.4s fall + .35s stagger; then .5s pause.
+    };
+    playJudgmentSound(true,false,complete);
   }
   function finishOniParty() {
     if(!oniPartyActive && !oniPending) return;
@@ -2905,11 +2930,9 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     oniPartyActive=true;
     controls.forEach(control=>{control.disabled=true;});
     document.body.classList.add('oni-party');
-    const timerLabel=document.createElement('div');timerLabel.className='oni-timer';
-    timerLabel.textContent=appSettings.lang==='on'?"It's a festival! Let's celebrate!!":'まつりだ～！まつりだー！お祭りだー！！';
     const progress=document.createElement('div'); progress.className='oni-progress';
     const banner=arcadeLayer.querySelector('.oni');
-    if(banner) banner.append(timerLabel,progress);
+    if(banner) banner.append(progress);
     try { playOniPartyMusic(); } catch(error) { console.warn('Celebration audio unavailable',error); }
     oniPartyTimer=setTimeout(()=>{oniCompleted[questionTypeSelect.value]=true;clearArcade();syncArcadeUI();},10300);
   }
