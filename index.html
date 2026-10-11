@@ -586,6 +586,11 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 .round-results{font-size:clamp(23px,5vw,32px);font-weight:700;margin:18px 0;}
 .round-results[hidden],.ending-ok[hidden]{display:none;}
 #ending-invitation{white-space:pre-line;}
+.coral-live-reward[hidden]{display:none;}
+.coral-live-description{font-size:17px;line-height:1.8;color:#fff1ce;margin:18px 0 12px;}
+.coral-live-link{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;max-width:100%;min-height:48px;padding:12px 22px;border:2px solid #ffe8a3;border-radius:14px;background:linear-gradient(135deg,#165c86,#613b86);color:#fff4ba;font-size:18px;font-weight:700;text-decoration:none;}
+.coral-live-link:hover{filter:brightness(1.15);}
+.coral-live-link:focus-visible{outline:3px solid #fff;outline-offset:4px;}
 #ending-title:focus{outline:none;}
 .arcade-banner.coral-cheer{top:22%;animation:prize-in 2.5s ease both;}
 .coral-cheer .coral-portrait{width:clamp(100px,22vh,175px);aspect-ratio:1;margin:0 auto 10px;}
@@ -3098,7 +3103,11 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   const endingStats=document.createElement('p');endingStats.className='round-results';
   endingTitle.tabIndex=-1;
   const endingCloseNote=document.createElement('p');endingCloseNote.className='ending-close-note';endingCloseNote.hidden=true;endingCloseNote.setAttribute('role','status');
-  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,endingCloseNote,endingStats,endingOK);
+  const coralLiveReward=document.createElement('section');coralLiveReward.className='coral-live-reward';coralLiveReward.hidden=true;
+  const coralLiveDescription=document.createElement('p');coralLiveDescription.className='coral-live-description';
+  const coralLiveLink=document.createElement('a');coralLiveLink.className='coral-live-link';coralLiveLink.href='https://youtu.be/nQdcTLEV64I';coralLiveLink.target='_blank';coralLiveLink.rel='noopener noreferrer';
+  coralLiveReward.append(coralLiveDescription,coralLiveLink);
+  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,coralLiveReward,endingCloseNote,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
   function scheduleGameEnding() {
@@ -3128,6 +3137,9 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       perfect?(en?'Try the other modes, too!':'他のモードにも挑戦だ〜！'):
       (en?'Keep going and aim for 30 correct answers in a row♪':'30問連続正解を目指してがんばってね♪');
     if(!endless){wrapPopupJapanese(invitation);if(!perfect)wrapPopupJapanese(endingTitle);}
+    coralLiveReward.hidden=!(sessionMode==='normal' && perfect);
+    coralLiveDescription.textContent=en?'The Coral Band is playing “Magical Undersea Party” at a special venue on the ocean floor. Come join us!':'これから海の底の特設会場でコーラル・バンドのライブ「魔法の海底パーティー」があるから、絶対見に来てね！';
+    coralLiveLink.textContent=en?'Go to Coral’s live show':'コーラルのライブを見に行く';
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
     endingOK.hidden=endless;
