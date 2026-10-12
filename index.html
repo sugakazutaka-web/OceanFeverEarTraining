@@ -773,7 +773,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       </div>
       <div class="instrument-legend" aria-hidden="true"><span><i class="legend-dot"></i>ROOT / KEY</span><span><i class="legend-dot answer"></i>YOUR NOTE</span></div></section>
       <div class="hint">
-        <div id="deck-counter">連続正解数：0/5　 EASY MODE</div>
+        <div id="deck-counter">0/30問 · ⭐️ 0個</div>
       </div>
     </main>
   </div>
@@ -2716,7 +2716,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     const stars=document.createElement('span'); stars.className='streak-stars'; stars.setAttribute('aria-hidden','true');
     for(let i=0;i<(sessionMode==='endless'?0:state.correct);i++) { const star=document.createElement('span'); star.textContent='★'; if((i+1)%5===0) star.classList.add('milestone-star'); if((i+1)%10===0) star.classList.add('silver-star'); stars.append(star); }
     const label=document.createElement('span'); label.className='streak-label';
-    label.textContent=english ? `${roundStats.total}/${roundLimit()} · ${roundStats.streak} in a row` : `${roundStats.total}/${roundLimit()}問 · ${roundStats.streak}連続正解`;
+    label.textContent=english ? `${roundStats.total}/${roundLimit()} · ⭐️ ${roundStats.streak}` : `${roundStats.total}/${roundLimit()}問 · ⭐️ ${roundStats.streak}個`;
     deckCounter.replaceChildren(stars,label);
     if (!state.hard) oniCompleted[questionTypeSelect.value]=false;
     syncResidentMascot();
