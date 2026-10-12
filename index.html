@@ -659,6 +659,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .challenge-dialog .oni-speech{font-size:clamp(23px,3vw,36px);line-height:1.3;}
 .arcade-banner.cheer25 .oni-speech{white-space:nowrap;transform:none;max-width:100%;font-size:min(clamp(23px,3vw,36px),calc((94vw - 74px)/13));}
 .coral-live-quality-note{font-size:14px;line-height:1.7;color:#fff1ce;margin:12px 0 0;}
+.arcade-banner.cheer25 .oni-speech:lang(en){white-space:normal;overflow-wrap:break-word;font-size:clamp(23px,3vw,36px);}
 </style>
 </head>
 <body>
@@ -3380,7 +3381,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     const banner=document.createElement('div');banner.className='arcade-banner cheer25 ending-dialog challenge-dialog';
     const title=document.createElement('h2');title.textContent='25 COMBO!';
     const image=document.createElement('img');image.className='ending-character';image.src=mascotImage;image.alt=en?'Coral cheering you on':'応援するコーラル';
-    const speech=document.createElement('div');speech.className='oni-speech';
+    const speech=document.createElement('div');speech.className='oni-speech';speech.lang=en?'en':'ja';
     speech.textContent=en?'Just 5 more in a row!\nYou can do it!':'あと5回連続、がんばって！';
     banner.append(title,image,speech);arcadeLayer.append(banner);arcadeTimer=setTimeout(clearArcade,2000);
   }
