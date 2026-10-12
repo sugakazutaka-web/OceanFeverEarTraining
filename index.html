@@ -3134,12 +3134,12 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       perfect?(en?'Game clear — congratulations!':'ゲームクリア<span class="ending-congratulations">おめでとう！</span>'):
       (en?'Thanks for playing 30 questions!':'30問おつかれさま！');
     invitation.textContent=endless?(en?'That’s all for today.\nI’m off to bed now.\nGood night!':'今日はここまで。\n私はもう寝ま〜す。\nおやすみなさい。'):
-      perfect?(en?'It’s time for the Coral Band’s live show!\nLet’s party together!':'さあ、コーラル・バンドのライブだよ。\nみんなで一緒に盛り上がろー！'):
+      perfect?(en?'It’s time for the Coral Band’s live show!\nLet’s party together!':'さあ、コーラルのライブだよ。\nみんなで一緒に盛り上がろー！'):
       (en?'Keep going and aim for 30 correct answers in a row♪':'30問連続正解を目指してがんばってね♪');
     if(!endless){wrapPopupJapanese(invitation);if(!perfect)wrapPopupJapanese(endingTitle);}
     coralLiveReward.hidden=!(sessionMode==='normal' && perfect);
     coralLiveDescription.textContent=en?'The Coral Band is playing “Magical Undersea Party” at a special venue on the ocean floor. Come join us!':'これから海の底の特設会場でコーラル・バンドのライブ「魔法の海底パーティー」があるから、絶対見に来てね！';
-    coralLiveLink.textContent=en?'Go to Coral’s live show':'コーラルのライブを見に行く';
+    coralLiveLink.textContent=en?'Go to Coral’s live show':'ライブを見に行く';
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
     endingOK.hidden=endless;
