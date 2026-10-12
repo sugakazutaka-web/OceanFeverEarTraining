@@ -592,7 +592,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 .coral-live-link:hover{filter:brightness(1.15);}
 .coral-live-link:focus-visible{outline:3px solid #fff;outline-offset:4px;}
 #ending-title:focus{outline:none;}
-.arcade-banner.coral-cheer{top:22%;animation:prize-in 2.5s ease both;}
+.arcade-banner.coral-cheer{top:22%;animation:prize-in 3s ease both;}
 .coral-cheer .coral-portrait{width:clamp(100px,22vh,175px);aspect-ratio:1;margin:0 auto 10px;}
 .coral-cheer strong{display:block;font-size:clamp(20px,4.5vw,32px);font-weight:600;}
 .coral-cheer .oni-speech{display:block;font-size:clamp(18px,4vw,27px);transform:none;margin-top:8px;}
@@ -3395,7 +3395,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     speech.textContent=endlessCheers[en?'en':'ja'][roundStats.streak/10-1];
     if(!en) appendCheerPhrases(speech,endlessCheerPhrases[roundStats.streak/10-1]);
     banner.append(portrait,title,speech);arcadeLayer.append(banner);
-    arcadeTimer=setTimeout(clearArcade,2500);
+    arcadeTimer=setTimeout(clearArcade,3000);
   }
   // Start on the fifth note of the normal correct-answer cue, preserving its timbre and mix.
   function playWarpJingle(){playJudgmentSound(true,true);}
