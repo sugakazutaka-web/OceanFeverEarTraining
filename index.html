@@ -651,6 +651,14 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .oni-party .oni-character{width:min(360px,42vh);height:min(360px,42vh);}
 .arcade-banner.oni .oni-speech{white-space:pre-line;line-height:1.3;}
 #arcade-fx .oni-intro-star{animation:treasure-fall 1.46s linear both;animation-delay:0s;}
+
+/* Match the ONI celebration sizing; keep the game visible behind milestones. */
+.challenge-dialog::backdrop{background:transparent;}
+.challenge-dialog,.arcade-banner.cheer25{width:min(650px,94vw);}
+.challenge-dialog .ending-character,.challenge-dialog.challenge-reply .ending-character{width:min(360px,42vh,100%);height:auto;aspect-ratio:1;}
+.challenge-dialog .oni-speech{font-size:clamp(23px,3vw,36px);line-height:1.3;}
+.arcade-banner.cheer25 .oni-speech{white-space:nowrap;transform:none;max-width:100%;font-size:min(clamp(23px,3vw,36px),calc((94vw - 74px)/13));}
+.coral-live-quality-note{font-size:14px;line-height:1.7;color:#fff1ce;margin:12px 0 0;}
 </style>
 </head>
 <body>
@@ -3106,7 +3114,8 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   const coralLiveReward=document.createElement('section');coralLiveReward.className='coral-live-reward';coralLiveReward.hidden=true;
   const coralLiveDescription=document.createElement('p');coralLiveDescription.className='coral-live-description';
   const coralLiveLink=document.createElement('a');coralLiveLink.className='coral-live-link';coralLiveLink.href='https://youtu.be/nQdcTLEV64I';coralLiveLink.target='_blank';coralLiveLink.rel='noopener noreferrer';
-  coralLiveReward.append(coralLiveDescription,coralLiveLink);
+  const coralLiveQualityNote=document.createElement('p');coralLiveQualityNote.className='coral-live-quality-note';
+  coralLiveReward.append(coralLiveDescription,coralLiveLink,coralLiveQualityNote);
   endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,coralLiveReward,endingCloseNote,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
@@ -3140,6 +3149,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     coralLiveReward.hidden=!(sessionMode==='normal' && perfect);
     coralLiveDescription.textContent=en?'The Coral Band is playing “Magical Undersea Party” at a special venue on the ocean floor. Come join us!':'これから海の底の特設会場でコーラル・バンドのライブ「魔法の海底パーティー」があるから、絶対見に来てね！';
     coralLiveLink.textContent=en?'Go to Coral’s live show':'ライブを見に行く';
+    coralLiveQualityNote.textContent=en?'For a clearer picture, set the YouTube video quality to 1080p!':'きれいな映像で楽しむには、YouTubeの画質を1080pに設定してね！';
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
     endingOK.hidden=endless;
@@ -3240,7 +3250,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       challengeSavedControls.forEach(([control,disabled])=>{control.disabled=disabled;});
       challengeSavedControls=[];
       challengeDialog.close();syncArcadeUI();startButton.focus();
-    },3000);
+    },2000);
   }
   challengeYes.addEventListener('click',()=>answerRootChallenge(true));
   challengeNo.addEventListener('click',()=>answerRootChallenge(false));
@@ -3367,14 +3377,12 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   }
   function showNormal25Cheer(){
     const en=appSettings.lang==='on';
-    const backdrop=document.createElement('div');backdrop.className='cheer25-backdrop';
     const banner=document.createElement('div');banner.className='arcade-banner cheer25 ending-dialog challenge-dialog';
     const title=document.createElement('h2');title.textContent='25 COMBO!';
     const image=document.createElement('img');image.className='ending-character';image.src=mascotImage;image.alt=en?'Coral cheering you on':'応援するコーラル';
     const speech=document.createElement('div');speech.className='oni-speech';
-    speech.textContent=en?'Just 5 more in a row!\nYou can do it!':'あと5回連続、\nがんばって！';
-    wrapPopupJapanese(speech);
-    banner.append(title,image,speech);arcadeLayer.append(backdrop,banner);arcadeTimer=setTimeout(clearArcade,5300);
+    speech.textContent=en?'Just 5 more in a row!\nYou can do it!':'あと5回連続、がんばって！';
+    banner.append(title,image,speech);arcadeLayer.append(banner);arcadeTimer=setTimeout(clearArcade,2000);
   }
   function showCoralCheer(){
     const en=appSettings.lang==='on';
