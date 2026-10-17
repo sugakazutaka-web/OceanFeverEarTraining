@@ -427,6 +427,10 @@ body.fever-oni .instrument {background:linear-gradient(130deg,#285972,#304e72);}
   color:#123b8f;text-shadow:0 1px 1px #ffffff88;}
 #deck-counter,#deck-counter.hard-mode {justify-content:space-between;}
 #deck-counter .streak-stars {display:flex;}
+/* On portrait phones, each large star replaces its completed group of five. */
+@media (max-width:650px) and (orientation:portrait) {
+  #deck-counter .streak-stars > .completed-group-star {display:none;}
+}
 
 
 /* Shared instrument selector and a six-string board with full-size touch rows. */
@@ -701,6 +705,13 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
                 <button type="button" class="setting-opt-btn" id="sound-none-btn" data-sound="none">なし</button>
               </div>
             </div>
+          <div class="setting-item" id="scale-expert-group" style="display:none">
+            <label id="label-scale-expert">エキスパート・モード</label>
+            <div class="setting-options" role="group" aria-labelledby="label-scale-expert">
+              <button type="button" class="setting-opt-btn active" data-scale-expert="off" aria-pressed="true">OFF</button>
+              <button type="button" class="setting-opt-btn" data-scale-expert="on" aria-pressed="false">ON</button>
+            </div>
+          </div>
           <div class="setting-item" id="melody-jazz-group" style="display:none">
             <label id="label-melody-jazz">ジャズ・モード</label>
             <div class="setting-options" role="group" aria-labelledby="label-melody-jazz">
@@ -901,9 +912,10 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     let appSettings = {
       firstNote: 'root',
       melodyJazz: 'off',
+      scaleExpert: 'off',
       speed: 'slow',
       sound: 'exists',
-      lang: 'off'
+      lang: 'on'
     };
 
     function t(key, ...args) {
@@ -988,8 +1000,22 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       });
     });
 
+    document.querySelectorAll('[data-scale-expert]').forEach(button => {
+      button.addEventListener('click', () => {
+        resetScaleSpeedBoost();
+        appSettings.scaleExpert = button.dataset.scaleExpert;
+        updateSettingsUI();
+      });
+    });
+
     function updateSettingsUI() {
       const english = appSettings.lang === 'on';
+      document.querySelector('#label-scale-expert').textContent = english ? 'Expert Mode' : 'エキスパート・モード';
+      document.querySelectorAll('[data-scale-expert]').forEach(button => {
+        const selected = button.dataset.scaleExpert === appSettings.scaleExpert;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      });
       document.querySelector('#label-melody-jazz').textContent = english ? 'Jazz Mode' : 'ジャズ・モード';
       document.querySelectorAll('[data-melody-jazz]').forEach(button => {
         button.textContent = button.dataset.melodyJazz === 'on' ? 'ON' : 'OFF';
@@ -1127,6 +1153,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       scaleSpeedBoost=true;
     }
     function playbackSpeedFactor(){
+      if(questionTypeSelect.value==='scale' && appSettings.scaleExpert==='on') return .25;
       if(sessionMode==='endless' && questionTypeSelect.value==='scale'){
         if(endlessProgress.level===2) return .25;
         if(endlessProgress.level===1) return .5;
@@ -1363,6 +1390,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 
     function updateUIControls() {
       const mode = questionTypeSelect.value;
+      document.querySelector('#scale-expert-group').style.display = mode === 'scale' ? 'block' : 'none';
       document.querySelector('#melody-jazz-group').style.display = mode === 'melody' ? 'block' : 'none';
       playChordBtn.hidden = mode === 'scale';
       playChordBtn.disabled = game.phase === 'idle' || mode === 'scale';
@@ -1558,7 +1586,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 
     // A sustained, warm body plus a short bell-like attack; no reverb or audio loop.
     const instrumentWaves = new Map();
-    function playBassPiano(midi, sustain, volume, scheduledTime, tone) {
+    function playBassPiano(midi, sustain, volume, scheduledTime, tone, releaseSeconds = .065) {
       if (document.hidden) return () => {};
       const ctx = ensureAudio(), now = Math.max(scheduledTime ?? ctx.currentTime, ctx.currentTime);
       const piano = tone === 'piano';
@@ -1585,7 +1613,8 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       highpass.connect(lowpass).connect(release).connect(ctx.destination);
       // Gentle low-register lift; taper to the normal level by C4.
       const level = volume * (piano ? .20 : .32 * (1 + .30 * bassLowLift));
-      const releaseStart = now + duration - .065;
+      const releaseDuration = Math.min(releaseSeconds, duration);
+      const releaseStart = now + duration - releaseDuration;
       release.gain.setValueAtTime(level, ctx.currentTime);
       release.gain.setValueAtTime(level, releaseStart);
       release.gain.linearRampToValueAtTime(0, now + duration);
@@ -1595,7 +1624,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
         if (stopped || remaining === 0) return;
         stopped = true;
         const at = ctx.currentTime;
-        const current = level * (at <= releaseStart ? 1 : Math.max(0,(now + duration - at)/.065));
+        const current = level * (at <= releaseStart ? 1 : Math.max(0,(now + duration - at)/releaseDuration));
         release.gain.cancelScheduledValues(at); release.gain.setValueAtTime(current, at);
         release.gain.linearRampToValueAtTime(0, at + .055);
         sources.forEach(source => { try { source.stop(at + .065); } catch (_) {} });
@@ -1623,9 +1652,9 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       return stop;
     }
 
-    function play(midi, sustain = .56, volume = .35, scheduledTime, role = 'fretboard') {
-      if (instrumentMode === 'bass') return playBassPiano(midi, sustain, volume, scheduledTime, role === 'chord' ? 'piano' : 'bass');
-      if (instrumentMode === 'guitar') return playCleanGuitar(midi, sustain, volume, scheduledTime);
+    function play(midi, sustain = .56, volume = .35, scheduledTime, role = 'fretboard', releaseSeconds) {
+      if (instrumentMode === 'bass') return playBassPiano(midi, sustain, volume, scheduledTime, role === 'chord' ? 'piano' : 'bass', releaseSeconds);
+      if (instrumentMode === 'guitar') return playCleanGuitar(midi, sustain, volume, scheduledTime, releaseSeconds);
       if (document.hidden) return () => {};
       const ctx = ensureAudio();
       const now = scheduledTime ?? ctx.currentTime;
@@ -1692,7 +1721,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       tine.stop(now + tineDuration + .01);
       if (duration !== null) {
         const end = now + duration;
-        gain.gain.setValueAtTime(level * .78, Math.max(now + decayTime, end - .06));
+        gain.gain.setValueAtTime(level * .78, Math.max(now + decayTime, end - (releaseSeconds ?? .06)));
         gain.gain.linearRampToValueAtTime(0, end);
         osc.stop(end + .02);
       }
@@ -1754,12 +1783,12 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     let lastPlayingCell = null;
     let playingTimeoutId = null;
 
-    function preview(cell, string, fret, showStatus = true, sustain = 0.56, showVisual = true, isCorrectStyle = false, isWrongStyle = false) {
+    function preview(cell, string, fret, showStatus = true, sustain = 0.56, showVisual = true, isCorrectStyle = false, isWrongStyle = false, playSound = true) {
       const midi = string.midi + fret;
       const note = noteName(midi);
       if (showStatus) setStatus(null, `${string.name} String / ${fret} Fret — ${note}`);
       const speedFactor = playbackSpeedFactor();
-      play(midi, sustain * speedFactor, .35, undefined, 'question');
+      if (playSound) play(midi, sustain * speedFactor, .35, undefined, 'question');
       if (!showVisual) return;
       
       if (playingTimeoutId) {
@@ -2283,7 +2312,25 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       if(generation!==gameGeneration) return;
       }
 
+      // Schedule the entire scale on the audio clock, independently of UI timers.
+      const scaleTiming = game.mode === 'scale' ? {
+        ctx: ensureAudio(), factor: playbackSpeedFactor()
+      } : null;
+      if (scaleTiming) {
+        scaleTiming.start = scaleTiming.ctx.currentTime + .04;
+        scaleTiming.step = beatMs * 1.3 / 1000 * scaleTiming.factor;
+        const release = Math.max(.012, .065 * scaleTiming.factor);
+        game.target.forEach((target, i) => {
+          // Correct answers may use another position, but have the same MIDI pitch.
+          play(target.midi, scaleTiming.step + release / 2, .35,
+            scaleTiming.start + i * scaleTiming.step, 'question', release);
+        });
+      }
       for (let i = 0; i < total; i++) {
+        if (scaleTiming) {
+          await wait(Math.max(0, (scaleTiming.start + i * scaleTiming.step - scaleTiming.ctx.currentTime) * 1000));
+          if(generation!==gameGeneration) return;
+        }
         let activePos = game.target[i];
         let isNoteCorrect = true;
 
@@ -2315,17 +2362,22 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
           .56, 
           shouldShowVisual, 
           isShowingResult && isNoteCorrect, 
-          isShowingResult && !isNoteCorrect
+          isShowingResult && !isNoteCorrect,
+          !scaleTiming
         );
 
         if (isShowingResult) {
           activePos.cell.classList.add(isNoteCorrect ? 'correct' : 'wrong');
         }
 
-        await wait(getAdjustedTime(beatMs * 1.3));
+        if (!scaleTiming) await wait(getAdjustedTime(beatMs * 1.3));
       if(generation!==gameGeneration) return;
       }
 
+      if (scaleTiming) {
+        await wait(Math.max(0, (scaleTiming.start + total * scaleTiming.step - scaleTiming.ctx.currentTime) * 1000));
+        if(generation!==gameGeneration) return;
+      }
       await wait(getAdjustedTime(400));
       if(generation!==gameGeneration) return;
 
@@ -2714,7 +2766,14 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     deckCounter.classList.toggle('hard-mode', state.hard);
     feverStage();
     const stars=document.createElement('span'); stars.className='streak-stars'; stars.setAttribute('aria-hidden','true');
-    for(let i=0;i<(sessionMode==='endless'?0:state.correct);i++) { const star=document.createElement('span'); star.textContent='★'; if((i+1)%5===0) star.classList.add('milestone-star'); if((i+1)%10===0) star.classList.add('silver-star'); stars.append(star); }
+    const completedStars = Math.floor(state.correct / 5) * 5;
+    for(let i=0;i<(sessionMode==='endless'?0:state.correct);i++) {
+      const star=document.createElement('span'); star.textContent='★';
+      if((i+1)%5===0) star.classList.add('milestone-star');
+      else if(i<completedStars) star.classList.add('completed-group-star');
+      if((i+1)%10===0) star.classList.add('silver-star');
+      stars.append(star);
+    }
     const label=document.createElement('span'); label.className='streak-label';
     label.textContent=english ? `${roundStats.total}/${roundLimit()} · ⭐️ ${roundStats.streak}` : `${roundStats.total}/${roundLimit()}問 · ⭐️ ${roundStats.streak}個`;
     deckCounter.replaceChildren(stars,label);
@@ -3243,7 +3302,12 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       if(generation!==gameGeneration || !challengeActive) return;
       if(harder && sessionMode==='normal') {
         if(challengeMode==='melody') appSettings.melodyJazz='on';
-        else if(challengeMode==='scale') enableScaleSpeedBoost();
+        else if(challengeMode==='scale') {
+          if(appSettings.speed==='fast') {
+            resetScaleSpeedBoost();
+            appSettings.scaleExpert='on';
+          } else enableScaleSpeedBoost();
+        }
         else appSettings.firstNote='random';
         updateSettingsUI();
       }
