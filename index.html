@@ -668,6 +668,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .arcade-banner.cheer25 .oni-speech{white-space:nowrap;transform:none;max-width:100%;font-size:min(clamp(23px,3vw,36px),calc((94vw - 74px)/13));}
 .coral-live-quality-note{font-size:14px;line-height:1.7;color:#fff1ce;margin:12px 0 0;}
 .arcade-banner.cheer25 .oni-speech:lang(en){white-space:normal;overflow-wrap:break-word;font-size:clamp(23px,3vw,36px);}
+.coral-live-link[hidden]{display:none!important;}
 </style>
 </head>
 <body>
@@ -3244,7 +3245,10 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   const coralLiveLink=document.createElement('a');coralLiveLink.className='coral-live-link';coralLiveLink.href='https://youtu.be/nQdcTLEV64I';coralLiveLink.target='_blank';coralLiveLink.rel='noopener noreferrer';
   const coralLiveQualityNote=document.createElement('p');coralLiveQualityNote.className='coral-live-quality-note';
   coralLiveReward.append(coralLiveDescription,coralLiveLink,coralLiveQualityNote);
-  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,coralLiveReward,endingCloseNote,endingStats,endingOK);
+  const graduationLink=document.createElement('a');
+  graduationLink.className='coral-live-link';graduationLink.hidden=true;
+  graduationLink.target='_blank';graduationLink.rel='noopener noreferrer';
+  endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,graduationLink,coralLiveReward,endingCloseNote,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
   function scheduleGameEnding() {
@@ -3284,6 +3288,17 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     endingCloseNote.textContent=en?'Please close the game screen.':'ゲーム画面を閉じてください。';
     endingCloseNote.hidden=!endless;
     endingOK.textContent=en?'Back to the start':'スタート画面に戻る';
+    const graduated=endless && roundStats.total===100 && roundStats.streak===100;
+    graduationLink.hidden=!graduated;
+    graduationLink.href='graduation.html?lang='+(en?'en':'ja');
+    graduationLink.textContent=en?'View your graduation certificate':'卒業証書を受け取る';
+    if(graduated){
+      endingTitle.textContent=en?'100 correct in a row!':'100問連続正解！';
+      endingBadge.textContent='★ OCEAN FEVER GRADUATE ★';
+      endingCharacter.src=mascotImage;
+      endingCharacter.alt=en?'Coral, the sea magician':'海の魔法使い・コーラル';
+      invitation.textContent=en?'Congratulations on your extraordinary musical ear!\nYour graduation certificate is ready.':'素晴らしい音楽耳に、大きな拍手！\nあなたへの卒業証書を用意したよ。';
+    }
     showPopupFromTop(endingDialog,endingTitle);
     // Both normal endings use the existing fanfare until the MP3 is supplied.
     try {if(endless)playEndlessEndingMusic();else playOniPartyMusic(true);}catch(error){console.warn('Ending music unavailable',error);}
