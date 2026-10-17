@@ -3251,6 +3251,26 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
   endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,graduationLink,coralLiveReward,endingCloseNote,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
+  let endingHintTimer;
+  function clearEndingHint() {
+    clearTimeout(endingHintTimer);
+    endingHintTimer=undefined;
+  }
+  function scheduleEndingHint(en) {
+    clearEndingHint();
+    const sleepMessage=invitation.textContent;
+    endingHintTimer=setTimeout(()=>{
+      if(!endingDialog.open) return;
+      invitation.textContent=en
+        ? 'Oh, by the way… I hear you get something if you answer 100 questions correctly in a row. Zzz…'
+        : 'そういえば、100問連続正解したら何かもらえるみたいだよ。むにゃむにゃ。。';
+      endingHintTimer=setTimeout(()=>{
+        if(endingDialog.open) invitation.textContent=sleepMessage;
+        endingHintTimer=undefined;
+      },10000);
+    },10000);
+  }
+  endingDialog.addEventListener('close',clearEndingHint);
   function scheduleGameEnding() {
     // Keep the correct result and its normal judgment sound visible/audible first.
     endingPending=true;
@@ -3260,6 +3280,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
     },3000);
   }
   function beginGameEnding() {
+    clearEndingHint();
     clearTimeout(endingDelayTimer);
     endingPending=false;
     clearTimeout(judgmentTimer);clearArcade();
@@ -3303,11 +3324,13 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
       invitation.textContent=en?'Congratulations on your extraordinary musical ear!\nYour graduation certificate is ready.':'素晴らしい音楽耳に、大きな拍手！\nあなたへの卒業証書を用意したよ。';
     }
     showPopupFromTop(endingDialog,endingTitle);
+    if(endless && !graduated) scheduleEndingHint(en);
     // Both normal endings use the existing fanfare until the MP3 is supplied.
     try {if(endless)playEndlessEndingMusic();else playOniPartyMusic(true);}catch(error){console.warn('Ending music unavailable',error);}
   }
 
   function returnToGameStart() {
+    clearEndingHint();
     gameGeneration++;
     endingActive=false;endingPending=false;challengeActive=false;challengeAnswered=false;
     clearTimeout(endingDelayTimer);clearTimeout(judgmentTimer);clearTimeout(playingTimeoutId);
