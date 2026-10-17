@@ -1303,7 +1303,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     let scaleDeck = [];
 
     function updateStartButton() {
-      startButton.textContent = game.phase === 'guess' ? t('skipBtn') : t('startBtn');
+      startButton.textContent = game.phase === 'guess' ? (specialMode()?(appSettings.lang==='on'?'Give Up':'あきらめる'):t('skipBtn')) : t('startBtn');
     }
 
     function questionTitle() {
@@ -2480,15 +2480,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
 
       positions.forEach(p => p.cell.classList.remove('selected', 'correct', 'wrong', 'computer-first'));
-      game.answers.forEach((ans, idx) => {
-        const isNoteCorrect = ans.midi === game.target[idx].midi;
-        if (isNoteCorrect) {
-          ans.cell.classList.add('correct');
-        } else {
-          const closeFret = findCloseFretForTarget(game.target[idx]);
-          closeFret.cell.classList.add('wrong');
-        }
-      });
+      if(!game.gaveUp||game.answerRevealed){
+        game.target.forEach((target,idx)=>{
+          const ans=game.answers[idx];
+          if(ans&&ans.midi===target.midi)ans.cell.classList.add('correct');
+          else if(ans||specialMode())findCloseFretForTarget(target).cell.classList.add('wrong');
+        });
+      }
 
       targetTitle.textContent = questionTitle();
       
@@ -2562,7 +2560,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     async function startGame() {
-      if(specialMode()&&game.phase==='guess'){showResult(true);return;}
+      if(specialMode()&&game.phase==='guess'){game.gaveUp=true;game.answerRevealed=false;showResult(true);return;}
       if(roundStats.total>=roundLimit())return;
       if(sessionMode==='mix'&&!await prepareMixedQuestion())return;
       if(sessionMode==='mxl')return startOriginalQuestion();
@@ -2902,10 +2900,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     banner.className = 'arcade-banner' + (kind === 'unlock' ? ' fever-start' : kind === 'end' ? ' fever-end' : kind === 'oni' ? ' oni' : kind === 'hot' ? ' hot' : correct ? '' : ' miss');
     const title = document.createElement('strong');
     const subtitle = document.createElement('small');
-    title.textContent = correct ? (unlocked ? '★ FEVER ★' : '★ GREAT! ★') : 'NOT QUITE';
+    title.textContent = correct ? (unlocked ? '★ FEVER ★' : '★ GREAT! ★') : (game.gaveUp?'ANSWER':'NOT QUITE');
     subtitle.textContent = correct
       ? (unlocked ? (english ? '5 IN A ROW · HARD MODE UNLOCKED' : '5連続正解！ HARD MODE 突入！') : (english ? 'PERFECT CATCH! · ' : 'お見事！ 音をキャッチ！ · ') + difficulty().correct + (english ? ' STREAK' : ' 連続正解'))
-      : (english ? 'Listen to the correct notes and check the pitches.' : '惜しい！ 正解を聴いて、音を確認しよう');
+      : (english ? 'Listen to the correct notes and check the pitches.' : '正解を聴いて、音を確認しよう');
     if(kind==='unlock') { title.textContent='FEVER START!'; subtitle.textContent=english?'5 IN A ROW · LET THE FEVER BEGIN!\nQuestions get a little harder!':'5連続正解！ フィーバータイム、スタート！\n問題が少し難しくなるよ。'; }
     if(kind==='hot') { title.textContent=english?'SUPER HOT!':'激アツ!!'; subtitle.textContent=english?'10 CONSECUTIVE HITS · THE OCEAN IS ON FIRE':'10連続正解！ 海が燃える、激アツ突入！'; }
     if(kind==='oni') { title.textContent=english?'ONI FEVER!!':'鬼フィーバー!!'; subtitle.textContent=''; }
@@ -2957,7 +2955,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const state=difficulty();
       celebrationKind=roundEvent==='finish'?'clear':sessionMode==='normal' && wasHard && !state.hard?'end':roundEvent;
       if(specialMode())showArcadeResult(correct,false,'normal');
-      if(roundEvent==='finish') scheduleGameEnding();
+      if(game.gaveUp&&!game.answerRevealed){
+        const abandonedGame=game,generation=gameGeneration;
+        startButton.disabled=replayButton.disabled=playChordBtn.disabled=instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=true;
+        setTimeout(()=>{
+          if(generation!==gameGeneration||game!==abandonedGame)return;
+          clearArcade();game.answerRevealed=true;
+          baseShowResult(false);instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
+          if(roundEvent==='finish')scheduleGameEnding();
+          syncArcadeUI();
+        },arcadeEnabled&&!document.hidden?2900:0);
+      }else if(roundEvent==='finish') scheduleGameEnding();
       else if(roundEvent==='challenge') beginRootChallenge();
       else if(roundEvent==='oni' && arcadeEnabled && !document.hidden){
         clearArcade();scheduleOniParty();
@@ -4041,7 +4049,7 @@ async function prepareMixedQuestion(){
     mixSectionSeen=section;
     const phrases=[['最初はコード問題、','いっくよー！'],['次はスケール問題、','がんばって！'],['最後はメロディ問題で','フィーバーだー！']][section];
     const english=["Chords first! Let's go!","Scales next! You've got this!","Melodies last! Let's bring on the fever!"][section];
-    return showModeAnnouncement(phrases,english,2000);
+    return showModeAnnouncement(phrases,english,3000);
   }
   return true;
 }
@@ -4115,7 +4123,12 @@ async function playOriginalQuestion(){
       if(event.type==='click'){flashUntil=event.at+.14;game.target[0].cell.classList.add('count-in-flash');}
       if(event.type==='chord')targetTitle.textContent=event.h.name;
       if(event.type==='note'){
-        if(result){positions.forEach(p=>p.cell.classList.remove('playing-correct'));game.target[event.i].cell.classList.add('playing-correct');}
+        if(result){
+          positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
+          const answer=game.answers[event.i],correct=answer&&answer.midi===game.target[event.i].midi;
+          const active=correct?answer:findCloseFretForTarget(game.target[event.i]);
+          active.cell.classList.add(correct?'playing-correct':'playing-wrong');
+        }
         else if(event.i===0)game.target[0].cell.classList.add('computer-first');
         setStatus(null,t('listenCarefully',event.i+1,q.notes.length));
       }
@@ -4125,6 +4138,7 @@ async function playOriginalQuestion(){
     await wait(25);
   }
   if(generation!==gameGeneration)return;
+  positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
   game.phase=result?'result':'guess';
   if(result)showResult(false);else setStatus(null,t('guessFirstPrompt',game.target.length));
   startButton.disabled=replayButton.disabled=instrumentSelect.disabled=false;
