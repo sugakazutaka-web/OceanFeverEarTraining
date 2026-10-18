@@ -685,6 +685,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 #extra-question-type{width:100%;min-height:38px;}
 .mode-announcement .mode-speech{display:flex;flex-wrap:wrap;justify-content:center;gap:0 .2em;font-size:clamp(19px,4.8vw,26px);line-height:1.6;}
 .mxl-loader p{font-size:17px;line-height:1.7;}.mxl-loader input{max-width:100%;font-size:16px;margin:16px 0;}
+.mxl-loader #mxl-title:focus{outline:none;box-shadow:none;}
 .mxl-loader select{margin-top:8px;} .mxl-loader button{font-size:17px;}
 
 .semantic-line{display:block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal}
@@ -697,7 +698,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .summary-note{color:white;text-shadow:0 0 2px #245d70,0 0 2px #245d70;font-size:23px}
 .summary-note.entered{color:#ff8a24;text-shadow:0 0 3px #fff}
 .summary-bar{font-weight:bold;margin-left:4px}
-.cell.count-in-flash rect{fill:#ffed00!important;stroke:#ff238b!important;stroke-width:5!important;filter:drop-shadow(0 0 9px #ffed00)}
+.cell.count-in-flash rect{fill:#fff!important;stroke:#fff!important;stroke-width:5!important;filter:drop-shadow(0 0 9px #fff)}
 body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6cd 55%,#b8fff1)!important;color:#075d51!important;border-color:#d5fff5!important}
 
 </style>
@@ -2958,13 +2959,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if(game.gaveUp&&!game.answerRevealed){
         const abandonedGame=game,generation=gameGeneration;
         startButton.disabled=replayButton.disabled=playChordBtn.disabled=instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=true;
-        setTimeout(()=>{
+        setTimeout(()=>runPlayback(async()=>{
           if(generation!==gameGeneration||game!==abandonedGame)return;
           clearArcade();game.answerRevealed=true;
-          baseShowResult(false);instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
+          baseShowResult(false);
+          await playQuestion();
+          if(generation!==gameGeneration||game!==abandonedGame)return;
+          instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
           if(roundEvent==='finish')scheduleGameEnding();
           syncArcadeUI();
-        },arcadeEnabled&&!document.hidden?2900:0);
+        }),arcadeEnabled&&!document.hidden?2900:0);
       }else if(roundEvent==='finish') scheduleGameEnding();
       else if(roundEvent==='challenge') beginRootChallenge();
       else if(roundEvent==='oni' && arcadeEnabled && !document.hidden){
@@ -3782,6 +3786,7 @@ function mxDocument(xml){
   return doc;
 }
 async function readMxlFile(file){
+  if(!/\.(mxl|musicxml|xml)$/i.test(file.name))mxError('MXL・MusicXML・XMLファイルを選んでください。','Choose an MXL, MusicXML, or XML file.');
   if(file.size>20*1024*1024) mxError('20MB以下のファイルを選んでください。','Choose a file under 20 MB.');
   let xml;
   if(/\.mxl$/i.test(file.name)){
@@ -4022,9 +4027,13 @@ function refreshExtraUI(){
     b.textContent=en?b.dataset.value.toUpperCase():b.dataset.value==='on'?'オン':'オフ';b.disabled=game.phase==='playing';
   }
   if(custom){playChordBtn.hidden=true;targetLabel.textContent=en?'CHORD':'コード名';}
-  mixModeButton.textContent=en?'Mix':'ミックス';mxlModeButton.textContent='.mxl';
+  mixModeButton.textContent=en?'Mix':'ミックス';mxlModeButton.textContent='mxl';
   mixModeButton.setAttribute('aria-pressed',String(mix));mxlModeButton.setAttribute('aria-pressed',String(custom));
-  if(mix)welcomeModeNote.textContent=en?'15 questions · Chords, scales, and melodies':'全15問 · コード・スケール・メロディを5問ずつ';
+  if(mix){
+    welcomeModeNote.replaceChildren();
+    if(en)welcomeModeNote.textContent='15 questions · Chords, scales, and melodies';
+    else welcomeModeNote.append('全15問・コード・スケール・メロディを',document.createElement('br'),'5問ずつ練習できるよ♪');
+  }
   if(custom)welcomeModeNote.textContent=en?'Import your own MusicXML question set':'MXLファイルからオリジナル問題集を読み込み';
 }
 async function showModeAnnouncement(phrases,english,duration){
@@ -4072,6 +4081,7 @@ async function startOriginalQuestion(){
 }
 function originalClick(at){
   const ctx=ensureAudio(),osc=ctx.createOscillator(),gain=ctx.createGain();
+  at=Math.max(at,ctx.currentTime); // Start the same complete click envelope on every beat.
   osc.type='triangle';osc.frequency.setValueAtTime(2400,at);osc.frequency.exponentialRampToValueAtTime(900,at+.035);gain.gain.setValueAtTime(.48,at);gain.gain.exponentialRampToValueAtTime(.0001,at+.055);
   osc.connect(gain).connect(ctx.destination);let stopped=false;
   const stop=()=>{if(stopped)return;stopped=true;try{osc.stop();}catch(_){}};
@@ -4184,7 +4194,9 @@ originalRetry.addEventListener('click',()=>{
 const mxlDialog=document.createElement('dialog');mxlDialog.className='coral-welcome mxl-loader';
 const mxlTitle=document.createElement('h2');mxlTitle.tabIndex=-1;mxlTitle.id='mxl-title';mxlDialog.setAttribute('aria-labelledby',mxlTitle.id);
 const mxlDescription=document.createElement('p');
-const mxlFile=document.createElement('input');mxlFile.type='file';mxlFile.accept='.mxl,.musicxml,.xml';
+const mxlFile=document.createElement('input');mxlFile.type='file';
+// Leave accept unset: iOS may disable MXL files whose type it does not recognize.
+// Validate the selected filename and score contents in readMxlFile instead.
 mxlFile.hidden=true;mxlFile.style.display='none';
 const mxlChoose=document.createElement('button');mxlChoose.type='button';mxlChoose.className='primary-btn';mxlChoose.addEventListener('click',()=>mxlFile.click());
 const mxlFileName=document.createElement('p');mxlFileName.setAttribute('aria-live','polite');
