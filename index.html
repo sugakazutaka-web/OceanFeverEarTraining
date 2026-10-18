@@ -424,10 +424,10 @@ body.fever-oni .instrument {background:linear-gradient(130deg,#285972,#304e72);}
   white-space:nowrap;letter-spacing:0;text-shadow:none;}
 #deck-counter .streak-stars > span:nth-child(10n),
 #deck-counter.hard-mode .streak-stars > span:nth-child(10n) {
-  color:#123b8f;text-shadow:0 1px 1px #ffffff88;}
+  color:#ffe79b;text-shadow:0 0 7px #ffc43b55;}
 #deck-counter,#deck-counter.hard-mode {justify-content:space-between;}
 #deck-counter .streak-stars {display:flex;}
-/* On portrait phones, each large star replaces its completed group of five. */
+/* On portrait phones, each large yellow star represents ten correct answers. */
 @media (max-width:650px) and (orientation:portrait) {
   #deck-counter .streak-stars > .completed-group-star {display:none;}
 }
@@ -684,7 +684,8 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .setting-item[hidden],#extra-question-type[hidden],.ending-ok[hidden]{display:none!important;}
 #extra-question-type{width:100%;min-height:38px;}
 .mode-announcement .mode-speech{display:flex;flex-wrap:wrap;justify-content:center;gap:0 .2em;font-size:clamp(19px,4.8vw,26px);line-height:1.6;}
-.mxl-loader p{font-size:17px;line-height:1.7;}.mxl-loader input{max-width:100%;font-size:16px;margin:16px 0;}
+.mxl-loader p{font-size:17px;line-height:1.7;}
+.mxl-loader .mxl-status.error{color:#ff9ba8;font-weight:800;background:#511c2c;padding:10px;border:1px solid #ff9ba8;border-radius:10px;}.mxl-loader input{max-width:100%;font-size:16px;margin:16px 0;}
 .mxl-loader #mxl-title:focus{outline:none;box-shadow:none;}
 .mxl-loader select{margin-top:8px;} .mxl-loader button{font-size:17px;}
 
@@ -2382,7 +2383,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
 
       // Schedule the entire scale on the audio clock, independently of UI timers.
-      const scaleTiming = game.mode === 'scale' ? {
+      const scaleTiming = (game.mode === 'scale' || game.mode === 'melody') ? {
         ctx: ensureAudio(), factor: playbackSpeedFactor()
       } : null;
       if (scaleTiming) {
@@ -2838,12 +2839,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     feverStage();
     const stars=document.createElement('span'); stars.className='streak-stars'; stars.setAttribute('aria-hidden','true');
     const starCount=specialMode()?roundStats.correct:state.correct;
-    const completedStars = Math.floor(starCount / 5) * 5;
+    const completedStars = Math.floor(starCount / 10) * 10;
     for(let i=0;i<(sessionMode==='endless'?0:starCount);i++) {
       const star=document.createElement('span'); star.textContent='★';
-      if((i+1)%5===0) star.classList.add('milestone-star');
+      if((i+1)%10===0) star.classList.add('milestone-star');
       else if(i<completedStars) star.classList.add('completed-group-star');
-      if((i+1)%10===0) star.classList.add('silver-star');
       stars.append(star);
     }
     const label=document.createElement('span'); label.className='streak-label';
@@ -2949,6 +2949,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const baseShowResult = showResult;
   showResult = function(isNewAnswer = true) {
     if(endingActive || endingPending || oniPending || oniPartyActive || challengeActive) return;
+    if(isNewAnswer && specialMode() && game.gaveUp && !game.answerRevealed){
+      return runPlayback(revealAbandonedAnswer);
+    }
     const wasHard = difficulty().hard;
     const correct = game.answers.length === game.target.length && game.answers.every((ans,i)=>ans.midi === game.target[i].midi);
     baseShowResult(isNewAnswer);
@@ -2956,20 +2959,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const state=difficulty();
       celebrationKind=roundEvent==='finish'?'clear':sessionMode==='normal' && wasHard && !state.hard?'end':roundEvent;
       if(specialMode())showArcadeResult(correct,false,'normal');
-      if(game.gaveUp&&!game.answerRevealed){
-        const abandonedGame=game,generation=gameGeneration;
-        startButton.disabled=replayButton.disabled=playChordBtn.disabled=instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=true;
-        setTimeout(()=>runPlayback(async()=>{
-          if(generation!==gameGeneration||game!==abandonedGame)return;
-          clearArcade();game.answerRevealed=true;
-          baseShowResult(false);
-          await playQuestion();
-          if(generation!==gameGeneration||game!==abandonedGame)return;
-          instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
-          if(roundEvent==='finish')scheduleGameEnding();
-          syncArcadeUI();
-        }),arcadeEnabled&&!document.hidden?2900:0);
-      }else if(roundEvent==='finish') scheduleGameEnding();
+      if(roundEvent==='finish') scheduleGameEnding();
+      else if(sessionMode==='mix' && [5,10].includes(roundStats.total)) scheduleMixedAnnouncement();
+
       else if(roundEvent==='challenge') beginRootChallenge();
       else if(roundEvent==='oni' && arcadeEnabled && !document.hidden){
         clearArcade();scheduleOniParty();
@@ -3702,7 +3694,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   welcomeStart.addEventListener('click',()=>{
     if(sessionMode==='mxl'){openOriginalLoader();return;}
     if(sessionMode==='mix')resetSpecialRound();
-    playWarpJingle();welcomeDialog.close();syncArcadeUI();startButton.focus();
+    playWarpJingle();welcomeDialog.close();syncArcadeUI();
+    if(sessionMode==='mix')runPlayback(announceMixedSection);else startButton.focus();
   });
   welcomeDialog.append(welcomeCoral,welcomeTitle,welcomeListen,welcomeMessage,welcomeLanguages,welcomeModes,welcomeModeNote,welcomeStart);document.body.append(welcomeDialog);
   updateWelcomeText();showPopupFromTop(welcomeDialog,welcomeTitle);
@@ -4050,6 +4043,35 @@ async function showModeAnnouncement(phrases,english,duration){
   if(generation!==gameGeneration)return false;
   instrumentSelect.disabled=false;return true;
 }
+async function revealAbandonedAnswer(){
+  const abandonedGame=game,generation=gameGeneration;
+  clearTimeout(judgmentTimer);clearArcade();stopArcadeAudio();endGesture();
+  game.answerRevealed=true;
+  game.phase='result';
+  setStatus(null,'');
+  recordResult(false);
+  await playQuestion();
+  if(generation!==gameGeneration||game!==abandonedGame)return;
+  // Playback sets the final wrong status once, after the last note.
+  if(roundEvent==='finish')scheduleGameEnding();
+  else if(sessionMode==='mix' && [5,10].includes(roundStats.total))await announceMixedSection();
+  syncArcadeUI();
+}
+async function announceMixedSection(){
+  const generation=gameGeneration;
+  clearArcade();
+  if(!await prepareMixedQuestion()||generation!==gameGeneration)return;
+  game.phase='idle';startButton.disabled=false;replayButton.disabled=true;
+  instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
+  updateStartButton();syncArcadeUI();
+}
+function scheduleMixedAnnouncement(){
+  const generation=gameGeneration,completedGame=game;
+  startButton.disabled=replayButton.disabled=playChordBtn.disabled=instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=true;
+  setTimeout(()=>{
+    if(generation===gameGeneration && game===completedGame)runPlayback(announceMixedSection);
+  },arcadeEnabled&&!document.hidden?2900:0);
+}
 async function prepareMixedQuestion(){
   const section=Math.min(2,Math.floor(roundStats.total/5));
   questionTypeSelect.value=['chord','scale','melody'][section];noteCountSelect.value=String(mixLevel+2);
@@ -4113,8 +4135,12 @@ async function playOriginalQuestion(){
   const ctx=ensureAudio(),start=ctx.currentTime+.08,factor=originalState.half?2:1,events=[];
   const chordSound=originalState.chords;
   q.notes.forEach((n,i)=>events.push({at:n.start*factor,type:'note',n,i}));
-  q.clicks.forEach(at=>events.push({at:at*factor,type:'click'}));
-  q.chords.forEach((h,i)=>events.push({at:h.start*factor,type:'chord',h,length:((q.chords[i+1]?.start??q.duration)-h.start)*factor}));
+  [...new Set(q.clicks)].forEach(at=>events.push({at:at*factor,type:'click'}));
+  q.chords.forEach((h,i)=>{
+    events.push({at:h.start*factor,type:'chord-label',h});
+    const at=Math.max(h.start,q.notes[0].start),end=q.chords[i+1]?.start??q.duration;
+    if(end>at)events.push({at:at*factor,type:'chord',h,length:(end-at)*factor});
+  });
   events.sort((a,b)=>a.at-b.at);let scheduled=0,shown=0,flashUntil=-1;if(!game.answers.length)originalSummary.scrollLeft=0;updateOriginalSummary();
   // A short look-ahead keeps long imported phrases from allocating every voice at once.
   while(generation===gameGeneration){
@@ -4131,7 +4157,7 @@ async function playOriginalQuestion(){
     while(shown<events.length&&events[shown].at<=elapsed){
       const event=events[shown++];
       if(event.type==='click'){flashUntil=event.at+.14;game.target[0].cell.classList.add('count-in-flash');}
-      if(event.type==='chord')targetTitle.textContent=event.h.name;
+      if(event.type==='chord-label')targetTitle.textContent=event.h.name;
       if(event.type==='note'){
         if(result){
           positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
@@ -4162,7 +4188,7 @@ function showSpecialEnding(){
   endingTitle.textContent=perfect?(custom?(en?'All correct! You did it!':'全問正解！やったね！'):(en?'All correct! Congratulations!':'全問正解おめでとう！')):(en?`Well done on ${roundLimit()} questions!`:`${roundLimit()}問おつかれさま！`);
   endingBadge.textContent=`★ ${roundLimit()} QUESTIONS COMPLETE ★`;endingCharacter.src=mascotImage;
   endingCharacter.alt=en?'Coral':'コーラル';invitation.replaceChildren();
-  const lines=perfect?[en?'Wonderful listening!':'素晴らしい音楽耳だね！']:custom?(en?['You can retry the missed questions now.','You can do it!']:['間違えた問題は','今から再挑戦できるよ、','がんばってね！']):(en?['Practice every day','and get more answers right!']:['毎日練習して','正解数を増やしていこうね♪']);
+  const lines=perfect?(en?[custom?'You worked so hard! Cheers to your effort!':"Feeling on top of the world!"]:custom?['よくがんばったね♪','あなたの頑張りに乾杯！']:['気分は上々だね〜↑↑']):custom?(en?['You can retry the missed questions now.','You can do it!']:['間違えた問題は','今から再挑戦できるよ、','がんばってね！']):(en?['Practice every day','and get more answers right!']:['毎日練習して','正解数を増やしていこうね♪']);
   lines.forEach(line=>{const span=document.createElement('span');span.className=en?'ending-line':'semantic-line';span.textContent=line;invitation.append(span);});
   endingStats.hidden=false;endingStats.textContent=en?`${roundStats.correct} correct out of ${roundLimit()}`:`${roundLimit()}問中${roundStats.correct}問正解`;
   if(!custom)endingStats.textContent=['chord','scale','melody'].map((mode,i)=>`${en?['Chords','Scales','Melodies'][i]:['コード','スケール','メロディ'][i]}: ${mixCorrect[mode]} / 5${en?' correct':'問正解'}`).join('\n');
@@ -4201,6 +4227,7 @@ mxlFile.hidden=true;mxlFile.style.display='none';
 const mxlChoose=document.createElement('button');mxlChoose.type='button';mxlChoose.className='primary-btn';mxlChoose.addEventListener('click',()=>mxlFile.click());
 const mxlFileName=document.createElement('p');mxlFileName.setAttribute('aria-live','polite');
 const mxlStatus=document.createElement('p');mxlStatus.setAttribute('role','status');
+mxlStatus.className='mxl-status';
 const mxlOrderLabel=document.createElement('label');mxlOrderLabel.htmlFor='mxl-order';
 const mxlOrder=document.createElement('select');mxlOrder.id='mxl-order';mxlOrder.append(new Option('','score'),new Option('','random'));
 const mxlStart=document.createElement('button');mxlStart.type='button';mxlStart.className='primary-btn';mxlStart.disabled=true;
@@ -4208,7 +4235,7 @@ const mxlCancel=document.createElement('button');mxlCancel.type='button';mxlCanc
 mxlDialog.append(mxlTitle,mxlDescription,mxlChoose,mxlFileName,mxlFile,mxlStatus,mxlOrderLabel,mxlOrder,mxlStart,mxlCancel);document.body.append(mxlDialog);
 let pendingOriginal=null,mxlLoadToken=0;
 function openOriginalLoader(){
-  const en=appSettings.lang==='on';pendingOriginal=null;mxlLoadToken++;mxlFile.value='';mxlStart.disabled=true;mxlStatus.textContent='';
+  const en=appSettings.lang==='on';pendingOriginal=null;mxlLoadToken++;mxlFile.value='';mxlStart.disabled=true;mxlStatus.classList.remove('error');mxlStatus.textContent='';
   mxlChoose.textContent=en?'Choose File':'ファイルを選択';mxlFileName.textContent=en?'No file selected':'選択されていません';
   mxlTitle.textContent=en?'Original questions':'オリジナル問題';mxlDescription.textContent=en?'Choose a single-part MXL score. Full-measure rests separate questions.':'単音1パートのMXLを選んでください。空白小節で問題を区切ります。';
   mxlFile.setAttribute('aria-label',en?'Choose an MXL file':'MXLファイルを選択');mxlOrderLabel.textContent=en?'Question order':'出題順';
@@ -4219,12 +4246,12 @@ function cancelOriginalLoader(){mxlLoadToken++;mxlDialog.close();}
 mxlCancel.addEventListener('click',cancelOriginalLoader);mxlDialog.addEventListener('cancel',e=>{e.preventDefault();cancelOriginalLoader();});
 mxlFile.addEventListener('change',async()=>{
   const file=mxlFile.files[0],token=++mxlLoadToken;pendingOriginal=null;mxlStart.disabled=true;if(!file)return;
-  mxlFileName.textContent=file.name;const en=appSettings.lang==='on';mxlStatus.textContent=en?'Reading…':'読み込み中…';
+  mxlStatus.classList.remove('error');mxlFileName.textContent=file.name;const en=appSettings.lang==='on';mxlStatus.textContent=en?'Reading…':'読み込み中…';
   try{
     const questions=await readMxlFile(file),available=availableOriginalInstruments(questions);
     if(token!==mxlLoadToken||!mxlDialog.open)return;
     pendingOriginal={questions,available};mxlStatus.textContent=en?`${questions.length} questions loaded.`:`${questions.length}問を読み込みました。`;mxlStart.disabled=false;
-  }catch(error){if(token===mxlLoadToken)mxlStatus.textContent=error.message|| (en?'Unable to read this file.':'読み込みに失敗しました。');}
+  }catch(error){if(token===mxlLoadToken){mxlStatus.classList.add('error');mxlStatus.textContent=(en?'Unable to load: ':'読み込めません：')+(error.message|| (en?'Please choose another file.':'別のファイルを選んでください。'));}}
 });
 mxlStart.addEventListener('click',()=>{
   if(!pendingOriginal)return;
