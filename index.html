@@ -685,7 +685,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 #extra-question-type{width:100%;min-height:38px;}
 .mode-announcement .mode-speech{display:flex;flex-wrap:wrap;justify-content:center;gap:0 .2em;font-size:clamp(19px,4.8vw,26px);line-height:1.6;}
 .mxl-loader p{font-size:17px;line-height:1.7;}
-.mxl-loader .mxl-status.error{color:#ff9ba8;font-weight:800;background:#511c2c;padding:10px;border:1px solid #ff9ba8;border-radius:10px;}.mxl-loader input{max-width:100%;font-size:16px;margin:16px 0;}
+.mxl-loader .mxl-status.error{color:#ff9ba8;font-weight:400;background:#511c2c;padding:10px;border:1px solid #ff9ba8;border-radius:10px;}.mxl-loader input{max-width:100%;font-size:16px;margin:16px 0;}
 .mxl-loader #mxl-title:focus{outline:none;box-shadow:none;}
 .mxl-loader select{margin-top:8px;} .mxl-loader button{font-size:17px;}
 
@@ -3695,7 +3695,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if(sessionMode==='mxl'){openOriginalLoader();return;}
     if(sessionMode==='mix')resetSpecialRound();
     playWarpJingle();welcomeDialog.close();syncArcadeUI();
-    if(sessionMode==='mix')runPlayback(announceMixedSection);else startButton.focus();
+    if(sessionMode==='mix')runPlayback(()=>announceMixedSection(true));else startButton.focus();
   });
   welcomeDialog.append(welcomeCoral,welcomeTitle,welcomeListen,welcomeMessage,welcomeLanguages,welcomeModes,welcomeModeNote,welcomeStart);document.body.append(welcomeDialog);
   updateWelcomeText();showPopupFromTop(welcomeDialog,welcomeTitle);
@@ -4057,9 +4057,9 @@ async function revealAbandonedAnswer(){
   else if(sessionMode==='mix' && [5,10].includes(roundStats.total))await announceMixedSection();
   syncArcadeUI();
 }
-async function announceMixedSection(){
+async function announceMixedSection(preserveStartSound=false){
   const generation=gameGeneration;
-  clearArcade();
+  if(!preserveStartSound)clearArcade();
   if(!await prepareMixedQuestion()||generation!==gameGeneration)return;
   game.phase='idle';startButton.disabled=false;replayButton.disabled=true;
   instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
@@ -4101,13 +4101,34 @@ async function startOriginalQuestion(){
   game={mode:'original',phase:'playing',target:placement.sequence,answers:[],titleName:'',displayKey:'',rootPitchIndex:-1,chordMidiNotes:[],originalQuestion:question,octaveShift:placement.shift};
   replayButton.textContent=t('replayBtn');renderOriginalSummary();centerPosition(game.target[0]);updateDeckCounterDisplay();updateStartButton();await playOriginalQuestion();
 }
+let originalClickBuffer=null;
 function originalClick(at){
-  const ctx=ensureAudio(),osc=ctx.createOscillator(),gain=ctx.createGain();
-  at=Math.max(at,ctx.currentTime); // Start the same complete click envelope on every beat.
-  osc.type='triangle';osc.frequency.setValueAtTime(2400,at);osc.frequency.exponentialRampToValueAtTime(900,at+.035);gain.gain.setValueAtTime(.48,at);gain.gain.exponentialRampToValueAtTime(.0001,at+.055);
-  osc.connect(gain).connect(ctx.destination);let stopped=false;
-  const stop=()=>{if(stopped)return;stopped=true;try{osc.stop();}catch(_){}};
-  activeVoices.add(stop);osc.onended=()=>{stopped=true;activeVoices.delete(stop);osc.disconnect();gain.disconnect();};osc.start(at);osc.stop(at+.06);
+  const ctx=ensureAudio();
+  // Render the first-beat triangle chirp once. Each beat plays exactly one
+  // immutable PCM buffer, with no oscillator automation or second sound layer.
+  if(!originalClickBuffer || originalClickBuffer.sampleRate!==ctx.sampleRate){
+    const rate=ctx.sampleRate,length=Math.ceil(rate*.06);
+    originalClickBuffer=ctx.createBuffer(1,length,rate);
+    const samples=originalClickBuffer.getChannelData(0);
+    let phase=0;
+    for(let i=0;i<length;i++){
+      const t=i/rate;
+      const frequency=2400*Math.pow(900/2400,Math.min(t/.035,1));
+      const triangle=2/Math.PI*Math.asin(Math.sin(phase));
+      const attack=Math.min(1,t/.001);
+      const tail=Math.min(1,(length-1-i)/(rate*.005));
+      const envelope=.48*Math.pow(.0001/.48,Math.min(t/.055,1));
+      samples[i]=triangle*envelope*attack*Math.max(0,tail);
+      phase+=2*Math.PI*frequency/rate;
+    }
+  }
+  const source=ctx.createBufferSource();source.buffer=originalClickBuffer;
+  source.connect(ctx.destination);
+  let stopped=false;
+  const stop=()=>{if(stopped)return;stopped=true;try{source.stop();}catch(_){}};
+  activeVoices.add(stop);
+  source.onended=()=>{stopped=true;activeVoices.delete(stop);source.disconnect();};
+  source.start(Math.max(at,ctx.currentTime));
 }
 function originalChordNotes(h){
   if(!h.intervals.length)return [];
@@ -4136,11 +4157,7 @@ async function playOriginalQuestion(){
   const chordSound=originalState.chords;
   q.notes.forEach((n,i)=>events.push({at:n.start*factor,type:'note',n,i}));
   [...new Set(q.clicks)].forEach(at=>events.push({at:at*factor,type:'click'}));
-  q.chords.forEach((h,i)=>{
-    events.push({at:h.start*factor,type:'chord-label',h});
-    const at=Math.max(h.start,q.notes[0].start),end=q.chords[i+1]?.start??q.duration;
-    if(end>at)events.push({at:at*factor,type:'chord',h,length:(end-at)*factor});
-  });
+  q.chords.forEach((h,i)=>events.push({at:h.start*factor,type:'chord',h,length:((q.chords[i+1]?.start??q.duration)-h.start)*factor}));
   events.sort((a,b)=>a.at-b.at);let scheduled=0,shown=0,flashUntil=-1;if(!game.answers.length)originalSummary.scrollLeft=0;updateOriginalSummary();
   // A short look-ahead keeps long imported phrases from allocating every voice at once.
   while(generation===gameGeneration){
@@ -4157,7 +4174,7 @@ async function playOriginalQuestion(){
     while(shown<events.length&&events[shown].at<=elapsed){
       const event=events[shown++];
       if(event.type==='click'){flashUntil=event.at+.14;game.target[0].cell.classList.add('count-in-flash');}
-      if(event.type==='chord-label')targetTitle.textContent=event.h.name;
+      if(event.type==='chord')targetTitle.textContent=event.h.name;
       if(event.type==='note'){
         if(result){
           positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
