@@ -168,7 +168,9 @@ button,select{border-radius:10px;transition:background .18s,border-color .18s,tr
 .header-tag { color:#b7ac9c;}
 .top-controls:before,.status-label { color:#c0a17e;}
 button { background:linear-gradient(180deg,#302820,#29231e); color:#e6bd89; border-color:#826649;}
+@media (hover:hover) and (pointer:fine) {
 button:hover:not(:disabled) { background:#473525; border-color:#d6a267;}
+}
 .settings-row:before { color:#bda386;}
 #label-q-type,#label-note-count,.setting-item label { color:#b7a590;}
 select { background:#181410; border-color:#826649!important; color:#e6bd89;}
@@ -207,9 +209,13 @@ main { position:relative; isolation:isolate;}
 #status-box.status-correct { background:#194538; border-color:#ffe87c; color:#fff0a9; text-shadow:0 0 14px #ffdd62;}
 #status-box.status-wrong { background:#302247; color:#ffc2e5; border-color:#f697cf;}
 button.primary-btn { background:linear-gradient(#fff4ad,#ffd356 48%,#f2a323); border-color:#ffefad; color:#59320b; box-shadow:0 3px 0 #966214,0 0 18px #ffd35133;}
+@media (hover:hover) and (pointer:fine) {
 button.primary-btn:hover:not(:disabled) { background:linear-gradient(#fff9d5,#ffe481,#ffbd38);}
+}
 button.secondary,#play-chord-arpeggio { background:linear-gradient(#a4efff,#47bfe2); border-color:#d4fbff; color:#073b59;}
-button.secondary:hover:not(:disabled),#play-chord-arpeggio:hover:not(:disabled) { background:#b6f3ff; border-color:#fff;}
+@media (hover:hover) and (pointer:fine) {
+button.secondary:hover:not(:disabled),#play-chord-arpeggio:hover:not(:disabled) { background:linear-gradient(#c0f5ff,#70d2ed); border-color:#fff;}
+}
 .settings-row { background:linear-gradient(130deg,#092c50,#061b3a); border-color:#55b8dc77;}
 .settings-row:before,#label-q-type,#label-note-count,.setting-item label { color:#a9dcea;}
 .settings-popup { border-color:#6bd2ec33;}
@@ -590,7 +596,10 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 .welcome-modes{display:flex;justify-content:center;gap:12px;margin-top:18px;}
 .welcome-modes button{min-width:110px;font-size:16px;min-height:42px;}
 .welcome-modes button[aria-pressed="true"]{border-color:#ffe38c;background:#17466b;color:#ffe99b;}
-.welcome-mode-note{display:block;margin:12px auto 0;line-height:1.6;color:#d1eaff;}
+.welcome-mode-note{display:block;margin:12px auto 0;line-height:1.6;color:#d1eaff;font-size:clamp(15px,4vw,18px);}
+.mix-level-dialog #mix-level-title{position:relative;background:#f5fbff;color:#173c58;border:2px solid #b9e3f4;border-radius:20px;padding:16px 12px;font-size:clamp(18px,4.8vw,24px);outline:none;}
+.mix-level-options{display:grid;grid-template-columns:1fr;gap:10px;margin-top:20px;}
+.mix-level-dialog .mix-level-options button{margin:0;white-space:normal;}
 .round-results{font-size:clamp(23px,5vw,32px);font-weight:700;margin:18px 0;}
 .round-results[hidden],.ending-ok[hidden]{display:none;}
 #ending-invitation{white-space:pre-line;}
@@ -3695,7 +3704,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if(sessionMode==='mxl'){openOriginalLoader();return;}
     if(sessionMode==='mix')resetSpecialRound();
     playWarpJingle();welcomeDialog.close();syncArcadeUI();
-    if(sessionMode==='mix')runPlayback(()=>announceMixedSection(true));else startButton.focus();
+    if(sessionMode==='mix')openMixLevelPicker();else startButton.focus();
   });
   welcomeDialog.append(welcomeCoral,welcomeTitle,welcomeListen,welcomeMessage,welcomeLanguages,welcomeModes,welcomeModeNote,welcomeStart);document.body.append(welcomeDialog);
   updateWelcomeText();showPopupFromTop(welcomeDialog,welcomeTitle);
@@ -4205,7 +4214,7 @@ function showSpecialEnding(){
   endingTitle.textContent=perfect?(custom?(en?'All correct! You did it!':'全問正解！やったね！'):(en?'All correct! Congratulations!':'全問正解おめでとう！')):(en?`Well done on ${roundLimit()} questions!`:`${roundLimit()}問おつかれさま！`);
   endingBadge.textContent=`★ ${roundLimit()} QUESTIONS COMPLETE ★`;endingCharacter.src=mascotImage;
   endingCharacter.alt=en?'Coral':'コーラル';invitation.replaceChildren();
-  const lines=perfect?(en?[custom?'You worked so hard! Cheers to your effort!':"Feeling on top of the world!"]:custom?['よくがんばったね♪','あなたの頑張りに乾杯！']:['気分は上々だね〜↑↑']):custom?(en?['You can retry the missed questions now.','You can do it!']:['間違えた問題は','今から再挑戦できるよ、','がんばってね！']):(en?['Practice every day','and get more answers right!']:['毎日練習して','正解数を増やしていこうね♪']);
+  const lines=perfect?(en?[custom?'You worked so hard! Cheers to your effort!':"Your ears are on fire today!🔥"]:custom?['よくがんばったね♪','あなたの頑張りに乾杯！']:['今日は絶好調だねー♪','ご〜いすー！']):custom?(en?['You can retry the missed questions now.','You can do it!']:['間違えた問題は','今から再挑戦できるよ、','がんばってね！']):(en?['Practice every day','and get more answers right!']:['毎日練習して','正解数を増やしていこうね♪']);
   lines.forEach(line=>{const span=document.createElement('span');span.className=en?'ending-line':'semantic-line';span.textContent=line;invitation.append(span);});
   endingStats.hidden=false;endingStats.textContent=en?`${roundStats.correct} correct out of ${roundLimit()}`:`${roundLimit()}問中${roundStats.correct}問正解`;
   if(!custom)endingStats.textContent=['chord','scale','melody'].map((mode,i)=>`${en?['Chords','Scales','Melodies'][i]:['コード','スケール','メロディ'][i]}: ${mixCorrect[mode]} / 5${en?' correct':'問正解'}`).join('\n');
@@ -4216,9 +4225,41 @@ function showSpecialEnding(){
   showPopupFromTop(endingDialog,endingTitle);
 }
 // New controls retain the original type selector internally for existing question generators.
+// Changing difficulty affects the next question and preserves the current round.
+function setMixLevel(level){
+  mixLevel=level;
+  noteCountSelect.value=String(mixLevel+2);
+  refreshExtraUI();syncArcadeUI();
+}
+const mixLevelDialog=document.createElement('dialog');
+mixLevelDialog.className='coral-welcome mix-level-dialog';
+const mixLevelCoral=document.createElement('img');mixLevelCoral.src=mascotImage;
+const mixLevelTitle=document.createElement('h2');mixLevelTitle.id='mix-level-title';mixLevelTitle.tabIndex=-1;
+mixLevelDialog.setAttribute('aria-labelledby',mixLevelTitle.id);
+const mixLevelOptions=document.createElement('div');mixLevelOptions.className='mix-level-options';
+for(let level=0;level<4;level++){
+  const button=document.createElement('button');button.type='button';button.className='primary-btn';
+  button.dataset.level=String(level);
+  button.addEventListener('click',()=>{
+    setMixLevel(level===3?Math.floor(Math.random()*3):level);
+    mixLevelDialog.close();
+    runPlayback(()=>announceMixedSection(true));
+  });
+  mixLevelOptions.append(button);
+}
+mixLevelDialog.append(mixLevelCoral,mixLevelTitle,mixLevelOptions);document.body.append(mixLevelDialog);
+mixLevelDialog.addEventListener('cancel',event=>event.preventDefault());
+function openMixLevelPicker(){
+  const en=appSettings.lang==='on';
+  mixLevelCoral.alt=en?'Coral':'コーラル';
+  mixLevelTitle.textContent=en?'Which level will you try this time?':'今回はどのレベルに挑戦する？';
+  const labels=en?['Beginner: Easy','Intermediate: A little tricky','Advanced: Very hard','???']:['初級：かんたん','中級：ちょいムズ','上級：激ムズ','？？？'];
+  Array.from(mixLevelOptions.children).forEach((button,i)=>button.textContent=labels[i]);
+  showPopupFromTop(mixLevelDialog,mixLevelTitle);
+}
 const extraTypeSelect=document.createElement('select');extraTypeSelect.id='extra-question-type';extraTypeSelect.hidden=true;
 extraTypeSelect.setAttribute('aria-label','Difficulty');questionTypeSelect.after(extraTypeSelect);
-extraTypeSelect.addEventListener('change',()=>{if(sessionMode!=='mix')return;mixLevel=Number(extraTypeSelect.value);resetSpecialRound();});
+extraTypeSelect.addEventListener('change',()=>{if(sessionMode!=='mix')return;setMixLevel(Number(extraTypeSelect.value));});
 function originalSetting(){const group=document.createElement('div');group.className='setting-item original-setting';const label=document.createElement('label');group.append(label);const buttons=document.createElement('div');buttons.className='setting-options';for(const value of ['off','on']){const b=document.createElement('button');b.type='button';b.className='setting-opt-btn';b.dataset.value=value;buttons.append(b);}group.append(buttons);settingsPopup.append(group);return [group,label];}
 const [originalHalfGroup,originalHalfLabel]=originalSetting(),[originalChordGroup,originalChordLabel]=originalSetting();
 originalHalfGroup.addEventListener('click',e=>{if(e.target.dataset.value){originalState.half=e.target.dataset.value==='on';refreshExtraUI();}});
