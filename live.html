@@ -17,7 +17,7 @@ p{font-size:14px;line-height:1.6;margin:8px 0 14px;color:#bdebf6}
 .actions{margin-top:16px}button{font:inherit;font-size:16px;min-height:44px;border:1px solid #ffefad;border-radius:10px;padding:10px 22px;background:linear-gradient(#fff4ad,#ffd356 48%,#f2a323);color:#59320b;cursor:pointer}
 button:focus-visible{outline:3px solid #8ce7ff;outline-offset:4px}
 @media(hover:hover) and (pointer:fine){button:hover{filter:brightness(1.08)}}
-.note{font-size:12px;margin:12px 0 0}
+.note{font-size:16px;line-height:1.8;margin:16px auto 0;max-width:760px;text-align:left}
 @media(orientation:landscape) and (max-height:500px){main{padding-top:8px}h1{font-size:20px}h1 span{display:inline;margin-left:8px}.intro{display:none}.player{width:min(100%,calc((100dvh - 94px)*16/9));margin:auto}.actions{margin-top:8px}.note{margin-top:8px}}
 </style>
 </head>
@@ -27,7 +27,7 @@ button:focus-visible{outline:3px solid #8ce7ff;outline-offset:4px}
 <p class="intro" id="intro">コーラル・バンドのライブを楽しんでね！</p>
 <div class="player" id="player"></div>
 <div class="actions"><button id="return" type="button">ゲームに戻る</button></div>
-<p class="note" id="note">動画の再生ボタンを押してください。プレーヤーから全画面表示も選べます。</p>
+<p class="note" id="note">動画の再生ボタンを押してください。プレーヤーの設定アイコンで画質を「1080p」にするとより綺麗な映像でライブを楽しめます。矢印のアイコンで全画面表示もできます。</p>
 </main>
 <script>
 'use strict';
@@ -37,7 +37,7 @@ const embedded=window.parent!==window&&params.get('embedded')==='1';
 document.documentElement.lang=en?'en':'ja';
 document.querySelector('#intro').textContent=en?'Enjoy the Coral Band’s live show!':'コーラル・バンドのライブを楽しんでね！';
 document.querySelector('#return').textContent=en?'Back to the game':'ゲームに戻る';
-document.querySelector('#note').textContent=en?'Tap Play to start. You can also select fullscreen in the player.':'動画の再生ボタンを押してください。プレーヤーから全画面表示も選べます。';
+document.querySelector('#note').textContent=en?'Tap the video’s play button to start. For a clearer picture, use the player’s settings icon to set the quality to “1080p”. You can also use the arrow icon to enter fullscreen.':'動画の再生ボタンを押してください。プレーヤーの設定アイコンで画質を「1080p」にするとより綺麗な映像でライブを楽しめます。矢印のアイコンで全画面表示もできます。';
 const player=document.createElement('iframe');
 player.title='CORAL LIVE : MAGICAL UNDERSEA PARTY';
 player.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';

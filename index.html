@@ -608,6 +608,7 @@ main{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(
 .round-results{font-size:clamp(23px,5vw,32px);font-weight:700;margin:18px 0;}
 .round-results[hidden],.ending-ok[hidden]{display:none;}
 #ending-invitation{white-space:pre-line;}
+.coral-live-reward{padding-bottom:16px;}
 .coral-live-reward[hidden]{display:none;}
 .coral-live-description{font-size:17px;line-height:1.8;color:#fff1ce;margin:18px 0 12px;}
 .coral-live-link{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;max-width:100%;min-height:48px;padding:12px 22px;border:2px solid #ffe8a3;border-radius:14px;background:linear-gradient(135deg,#165c86,#613b86);color:#fff4ba;font-size:18px;font-weight:700;text-decoration:none;}
@@ -679,7 +680,6 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .challenge-dialog .ending-character,.challenge-dialog.challenge-reply .ending-character{width:min(360px,42vh,100%);height:auto;aspect-ratio:1;}
 .challenge-dialog .oni-speech{font-size:clamp(23px,3vw,36px);line-height:1.3;}
 .arcade-banner.cheer25 .oni-speech{white-space:nowrap;transform:none;max-width:100%;font-size:min(clamp(23px,3vw,36px),calc((94vw - 74px)/13));}
-.coral-live-quality-note{font-size:14px;line-height:1.7;color:#fff1ce;margin:12px 0 0;}
 .arcade-banner.cheer25 .oni-speech:lang(en){white-space:normal;overflow-wrap:break-word;font-size:clamp(23px,3vw,36px);}
 .coral-live-link[hidden]{display:none!important;}
 /* Separate the graduation message and link into unrotated, stacked rows. */
@@ -3386,8 +3386,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const coralLiveReward=document.createElement('section');coralLiveReward.className='coral-live-reward';coralLiveReward.hidden=true;
   const coralLiveDescription=document.createElement('p');coralLiveDescription.className='coral-live-description';
   const coralLiveLink=document.createElement('button');coralLiveLink.type='button';coralLiveLink.className='coral-live-link';
-  const coralLiveQualityNote=document.createElement('p');coralLiveQualityNote.className='coral-live-quality-note';
-  coralLiveReward.append(coralLiveDescription,coralLiveLink,coralLiveQualityNote);
+  coralLiveReward.append(coralLiveDescription,coralLiveLink);
   const graduationLink=document.createElement('a');
   graduationLink.className='coral-live-link graduation-link';graduationLink.hidden=true;
   graduationLink.target='_blank';graduationLink.rel='noopener noreferrer';
@@ -3491,7 +3490,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     coralLiveReward.hidden=!(sessionMode==='normal' && perfect);
     coralLiveDescription.textContent=en?'The Coral Band is playing “Magical Undersea Party” at a special venue on the ocean floor. Come join us!':'これから海の底の特設会場でコーラル・バンドのライブ「魔法の海底パーティー」があるから、絶対見に来てね！';
     coralLiveLink.textContent=en?'Go to Coral’s live show':'ライブを見に行く';
-    coralLiveQualityNote.textContent=en?'For a clearer picture, set the YouTube video quality to 1080p!':'きれいな映像で楽しむには、YouTubeの画質を1080pに設定してね！';
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of 30`:`30問中${roundStats.correct}問正解`;
     endingOK.hidden=endless;
