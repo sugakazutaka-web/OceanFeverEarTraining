@@ -735,6 +735,14 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
 @media (max-width:360px) {
   html:lang(en) .scroll-pad {font-size:11px;gap:4px;letter-spacing:-.2px;}
 }
+/* The live page stays inside the game, including Home Screen mode. */
+.coral-live-dialog {width:min(1080px,calc(100vw - 16px));height:min(820px,calc(100dvh - 16px));max-width:none;max-height:calc(100dvh - 16px);padding:0;border:2px solid #ffe08b;border-radius:18px;background:#031238;color:#fff7d7;overflow:hidden;}
+.coral-live-dialog::backdrop {background:#020719e8;}
+.coral-live-dialog[open] {display:flex;flex-direction:column;}
+.coral-live-close {align-self:flex-end;flex:0 0 auto;margin:6px 8px;min-height:40px;padding:6px 14px;background:#103958;border-color:#50bbd9;color:#cef7ff;}
+.coral-live-frame-host {flex:1;min-height:0;}
+.coral-live-frame-host iframe {display:block;width:100%;height:100%;border:0;}
+@media(orientation:landscape) and (max-height:500px){.coral-live-dialog{width:calc(100vw - 8px);height:calc(100dvh - 8px);max-height:calc(100dvh - 8px);border-radius:10px;}.coral-live-close{min-height:30px;margin:2px 8px;padding:2px 12px;}}
 </style>
 </head>
 <body>
@@ -3377,7 +3385,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const endingCloseNote=document.createElement('p');endingCloseNote.className='ending-close-note';endingCloseNote.hidden=true;endingCloseNote.setAttribute('role','status');
   const coralLiveReward=document.createElement('section');coralLiveReward.className='coral-live-reward';coralLiveReward.hidden=true;
   const coralLiveDescription=document.createElement('p');coralLiveDescription.className='coral-live-description';
-  const coralLiveLink=document.createElement('a');coralLiveLink.className='coral-live-link';coralLiveLink.href='https://youtu.be/nQdcTLEV64I';coralLiveLink.target='_blank';coralLiveLink.rel='noopener noreferrer';
+  const coralLiveLink=document.createElement('button');coralLiveLink.type='button';coralLiveLink.className='coral-live-link';
   const coralLiveQualityNote=document.createElement('p');coralLiveQualityNote.className='coral-live-quality-note';
   coralLiveReward.append(coralLiveDescription,coralLiveLink,coralLiveQualityNote);
   const graduationLink=document.createElement('a');
@@ -3386,6 +3394,50 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   endingDialog.append(endingBadge,endingTitle,endingCharacter,invitation,graduationLink,coralLiveReward,endingCloseNote,endingStats,endingOK);
   document.body.append(endingDialog);
   endingDialog.addEventListener('cancel',event=>event.preventDefault());
+
+  // Load the separate live page only when the reward is opened.
+  const liveDialog=document.createElement('dialog');
+  liveDialog.className='coral-live-dialog';
+  liveDialog.setAttribute('aria-label','Coral Live');
+  const liveClose=document.createElement('button');
+  liveClose.type='button';liveClose.className='coral-live-close';
+  const liveFrameHost=document.createElement('div');liveFrameHost.className='coral-live-frame-host';
+  liveDialog.append(liveClose,liveFrameHost);document.body.append(liveDialog);
+  let liveFrame=null;
+  function closeCoralLive(){
+    // Destroy the nested player so playback cannot continue behind the game.
+    liveFrameHost.replaceChildren();liveFrame=null;
+    if(liveDialog.open)liveDialog.close();
+    if(endingDialog.open)coralLiveLink.focus({preventScroll:true});
+  }
+  function openCoralLive(){
+    if(liveDialog.open)return;
+    const en=appSettings.lang==='on';
+    clearArcade();stopArcadeAudio();activeVoices.forEach(stop=>stop());
+    liveClose.textContent=en?'Close ×':'閉じる ×';
+    liveClose.setAttribute('aria-label',en?'Close live video and return to the game':'ライブ動画を閉じてゲームに戻る');
+    const url=new URL('live.html',window.location.href);
+    url.searchParams.set('lang',en?'en':'ja');
+    url.searchParams.set('embedded','1');
+    liveFrame=document.createElement('iframe');
+    liveFrame.title='CORAL LIVE : MAGICAL UNDERSEA PARTY';
+    liveFrame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+    liveFrame.setAttribute('allowfullscreen','');
+    liveFrame.referrerPolicy='strict-origin-when-cross-origin';
+    liveFrame.src=url.href;
+    liveFrameHost.replaceChildren(liveFrame);
+    showPopupFromTop(liveDialog,liveClose);
+  }
+  coralLiveLink.addEventListener('click',openCoralLive);
+  liveClose.addEventListener('click',closeCoralLive);
+  liveDialog.addEventListener('cancel',event=>{event.preventDefault();closeCoralLive();});
+  liveDialog.addEventListener('close',()=>{liveFrameHost.replaceChildren();liveFrame=null;});
+  window.addEventListener('message',event=>{
+    if(!liveDialog.open||!liveFrame||event.source!==liveFrame.contentWindow)return;
+    if(event.origin!==window.location.origin)return;
+    if(event.data?.type==='coral-live-close')closeCoralLive();
+  });
+
   let endingHintTimer;
   function clearEndingHint() {
     clearTimeout(endingHintTimer);
@@ -3467,6 +3519,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   function returnToGameStart() {
+    closeCoralLive();
     clearEndingHint();
     originalRetry.hidden=true;
     gameGeneration++;
