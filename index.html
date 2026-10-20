@@ -743,6 +743,8 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
 .coral-live-frame-host {flex:1;min-height:0;}
 .coral-live-frame-host iframe {display:block;width:100%;height:100%;border:0;}
 @media(orientation:landscape) and (max-height:500px){.coral-live-dialog{width:calc(100vw - 8px);height:calc(100dvh - 8px);max-height:calc(100dvh - 8px);border-radius:10px;}.coral-live-close{min-height:30px;margin:2px 8px;padding:2px 12px;}}
+.root-marker.mx-chord-root{fill:#4da6ff33;stroke:#65baff;}
+#root-markers .mx-chord-root-label{fill:#d7eeff;stroke:#123658;}
 </style>
 </head>
 <body>
@@ -1362,8 +1364,33 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // Category bags enforce the selected mode proportions.
   let melodyTypeBag=[];
   let melodyTypeRule=null;
-  const recentMelodyShapes=[];
-  const recentMelodyIds=[];
+  const melodyHistoryStorageKey='ocean-fever.melody-history.v1';
+  const melodyHistoryLimit=128;
+  const melodyPhraseById=new Map(melodyLibrary.map(phrase=>[phrase.id,phrase]));
+  const melodyHistory=loadMelodyHistory();
+  function loadMelodyHistory(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(melodyHistoryStorageKey));
+      if(saved?.version!==1||!Array.isArray(saved.ids))return [];
+      return saved.ids.filter(id=>Number.isInteger(id)&&melodyPhraseById.has(id)).slice(-melodyHistoryLimit);
+    }catch(_){return [];}
+  }
+  function rememberMelody(phrase){
+    melodyHistory.push(phrase.id);
+    if(melodyHistory.length>melodyHistoryLimit)melodyHistory.splice(0,melodyHistory.length-melodyHistoryLimit);
+    try{localStorage.setItem(melodyHistoryStorageKey,JSON.stringify({version:1,ids:melodyHistory}));}catch(_){}
+  }
+  function freshMelodies(eligible,mode){
+    const shapeLimit=mode==='easy'?8:64,idLimit=mode==='easy'?16:128;
+    // Release only the oldest blocking records; never drop the whole history at once.
+    for(let released=0;released<=melodyHistory.length;released++){
+      const shapes=new Set(melodyHistory.slice(Math.max(released,melodyHistory.length-shapeLimit)).map(id=>melodyShape(melodyPhraseById.get(id).notes)));
+      const ids=new Set(melodyHistory.slice(Math.max(released,melodyHistory.length-idLimit)));
+      const fresh=eligible.filter(p=>!ids.has(p.id)&&!shapes.has(melodyShape(p.notes)));
+      if(fresh.length)return fresh;
+    }
+    return [];
+  }
   let lastMelodyKey=null;
   function shuffleMelodies(items) {
     const copy=[...items];
@@ -1414,9 +1441,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const def=melodyDefinitions.find(d=>d.id===type);
     const eligible=melodyLibrary.filter(p=>melodyCategory(p,mode)===category);
     // The signature uses intervals from the first note, so changing keys cannot bypass it.
-    let fresh=eligible.filter(p=>!recentMelodyShapes.includes(melodyShape(p.notes)) && !recentMelodyIds.includes(p.id));
-    if(!fresh.length) fresh=eligible.filter(p=>melodyShape(p.notes)!==recentMelodyShapes.at(-1));
-    if(!fresh.length) fresh=eligible;
+    const fresh=freshMelodies(eligible,mode);
     const scales=def.scales.filter(scale=>fresh.some(p=>p.scale===scale.id));
     let ticket=Math.random()*scales.reduce((sum,scale)=>sum+scale.weight,0);
     const scale=scales.find(scale=>(ticket-=scale.weight)<0) || scales.at(-1);
@@ -1431,10 +1456,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const placed=placeMelody(phrase.notes,rootPitchIndex);
         if(!placed) continue;
         lastMelodyKey=rootPitchIndex;
-        recentMelodyShapes.push(melodyShape(phrase.notes));
-        if(recentMelodyShapes.length>32) recentMelodyShapes.shift();
-        recentMelodyIds.push(phrase.id);
-        if(recentMelodyIds.length>64) recentMelodyIds.shift();
+        rememberMelody(phrase);
         return {
           sequence:placed.sequence,
           titleName:pitchNames[rootPitchIndex]+def.name,
@@ -2558,7 +2580,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const targetLen = game.target.length;
       if (game.answers.length >= targetLen) return;
 
-      game.answers.push(position);if(sessionMode==='mxl')updateOriginalSummary();
+      game.answers.push(position);if(sessionMode==='mxl'){updateOriginalSummary();updateOriginalAnswerHarmony();}
       position.cell.classList.add('selected');
 
       if (game.answers.length < targetLen) {
@@ -2609,7 +2631,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const removed=game.answers.pop();
       if(!game.answers.some(answer=>answer.cell===removed.cell))removed.cell.classList.remove('selected');
       removed.cell.classList.remove('playing');
-      if(sessionMode==='mxl')updateOriginalSummary();
+      if(sessionMode==='mxl'){updateOriginalSummary();updateOriginalAnswerHarmony();}
       setStatus(null,t('guessNextPrompt',game.answers.length+1,game.target.length));
       updateStartButton();
     }
@@ -2980,9 +3002,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     banner.className = 'arcade-banner' + (kind === 'unlock' ? ' fever-start' : kind === 'end' ? ' fever-end' : kind === 'oni' ? ' oni' : kind === 'hot' ? ' hot' : correct ? '' : ' miss');
     const title = document.createElement('strong');
     const subtitle = document.createElement('small');
-    title.textContent = correct ? (unlocked ? '★ FEVER ★' : '★ GREAT! ★') : 'NOT QUITE';
+    title.textContent = correct ? '★ GREAT! ★' : 'NOT QUITE';
     subtitle.textContent = correct
-      ? (unlocked ? (english ? '5 IN A ROW · HARD MODE UNLOCKED' : '5連続正解！ HARD MODE 突入！') : (english ? 'PERFECT CATCH! · ' : 'お見事！ 音をキャッチ！ · ') + difficulty().correct + (english ? ' STREAK' : ' 連続正解'))
+      ? (specialMode() ? (english ? 'PERFECT CATCH!' : 'お見事！ 音をキャッチ！') : (english ? 'PERFECT CATCH! · ' : 'お見事！ 音をキャッチ！ · ') + difficulty().correct + (english ? ' STREAK' : ' 連続正解'))
       : (english ? "Let’s check the correct answer." : "正解を聴いて、音を確認しよう。");
     if(kind==='unlock') { title.textContent='FEVER START!'; subtitle.textContent=english?'5 IN A ROW · LET THE FEVER BEGIN!\nQuestions get a little harder!':'5連続正解！ フィーバータイム、スタート！\n問題が少し難しくなるよ。'; }
     if(kind==='hot') { title.textContent=english?'SUPER HOT!':'激アツ!!'; subtitle.textContent=english?'10 CONSECUTIVE HITS · THE OCEAN IS ON FIRE':'10連続正解！ 海が燃える、激アツ突入！'; }
@@ -3375,11 +3397,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   endingDialog.className='ending-dialog';
   endingDialog.setAttribute('aria-labelledby','ending-title');
   endingDialog.setAttribute('aria-describedby','ending-invitation');
-  const endingTitle=document.createElement('h2');endingTitle.id='ending-title';endingTitle.innerHTML='<span>ゲームクリア</span> <span class="ending-congratulations">おめでとう！</span>';
-  const endingBadge=document.createElement('div');endingBadge.className='ending-badge';endingBadge.textContent='★ 30 QUESTIONS ★';
+  const endingTitle=document.createElement('h2');endingTitle.id='ending-title';
+  const endingBadge=document.createElement('div');endingBadge.className='ending-badge';
   const endingCharacter=document.createElement('img');endingCharacter.className='ending-character';endingCharacter.src=mascotImage;endingCharacter.alt='海の魔法使い・コーラル';
-  const invitation=document.createElement('div');invitation.id='ending-invitation';invitation.className='oni-speech';invitation.textContent='他のモードにも挑戦だ〜！';
-  const endingOK=document.createElement('button');endingOK.type='button';endingOK.className='ending-ok primary-btn';endingOK.textContent='OK';
+  const invitation=document.createElement('div');invitation.id='ending-invitation';invitation.className='oni-speech';
+  const endingOK=document.createElement('button');endingOK.type='button';endingOK.className='ending-ok primary-btn';
   const endingStats=document.createElement('p');endingStats.className='round-results';
   endingTitle.tabIndex=-1;
   const endingCloseNote=document.createElement('p');endingCloseNote.className='ending-close-note';endingCloseNote.hidden=true;endingCloseNote.setAttribute('role','status');
@@ -3529,7 +3551,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     closeThemeDialog();
     resetRoundProgress();
     chordTypeBag=[];lastChordName=lastChordShape=null;melodyTypeBag=[];melodyTypeRule=null;lastMelodyKey=null;
-    recentMelodyShapes.length=recentMelodyIds.length=0;
+    // Melody history survives round resets.
     game={mode:questionTypeSelect.value,phase:'idle',target:[],answers:[],titleName:'',displayKey:'',rootPitchIndex:null,chordMidiNotes:[]};
     celebrationKind='normal';
     [startButton,instrumentSelect,questionTypeSelect,noteCountSelect,firstNoteControls].forEach(control=>{control.disabled=false;});
@@ -3667,7 +3689,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     strings = makeStrings();
     scaleDeck = []; chordTypeBag = []; lastChordName = lastChordShape = null;
     melodyTypeBag = []; melodyTypeRule = null; lastMelodyKey = null;
-    recentMelodyShapes.length = recentMelodyIds.length = 0;
+    // Melody history is shared across instruments.
     game = { mode:questionTypeSelect.value, phase:'idle', target:[], answers:[], titleName:'', displayKey:'', rootPitchIndex:-1, chordMidiNotes:[] };
     celebrationKind = 'normal';
     buildFretboard();
@@ -3913,6 +3935,20 @@ async function readMxlFile(file){
 }
 const mxSteps={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 const mxKinds={major:['',[0,4,7]],minor:['m',[0,3,7]],augmented:['aug',[0,4,8]],diminished:['dim',[0,3,6]],dominant:['7',[0,4,7,10]],'major-seventh':['maj7',[0,4,7,11]],'minor-seventh':['m7',[0,3,7,10]],'diminished-seventh':['dim7',[0,3,6,9]],'half-diminished':['m7♭5',[0,3,6,10]],'major-minor':['m(maj7)',[0,3,7,11]],'major-sixth':['6',[0,4,7,9]],'minor-sixth':['m6',[0,3,7,9]],'dominant-ninth':['9',[0,4,7,10,14]],'major-ninth':['maj9',[0,4,7,11,14]],'minor-ninth':['m9',[0,3,7,10,14]],'dominant-11th':['11',[0,4,7,10,14,17]],'major-11th':['maj11',[0,4,7,11,14,17]],'minor-11th':['m11',[0,3,7,10,14,17]],'dominant-13th':['13',[0,4,7,10,14,21]],'major-13th':['maj13',[0,4,7,11,14,21]],'minor-13th':['m13',[0,3,7,10,14,21]],'suspended-second':['sus2',[0,2,7]],'suspended-fourth':['sus4',[0,5,7]],power:['5',[0,7]],none:['N.C.',[]]};
+function formatMxChordSuffix(suffix){
+  const match=suffix.match(/^(.*?7)(.*)$/);
+  if(!match)return suffix;
+  let head=match[1],tail=match[2];
+  // Preserve the quality notation in m(maj7) before grouping its extensions.
+  if(head.includes('(')&&tail.startsWith(')')){head+=')';tail=tail.slice(1);}
+  const tones=[];
+  const rest=tail.replace(/sus[24]|no\d+|(?:add)?[♭♯b#]?\d+/g,token=>{
+    if(token.startsWith('sus'))return token;
+    tones.push(token.replace(/^add/,''));return '';
+  });
+  if(!tones.length)return suffix;
+  return head+rest.replace(/[(),\s]/g,'')+'('+[...new Set(tones)].join(',')+')';
+}
 function parseMxHarmony(el,transpose){
   const kindNode=mxChild(el,'kind'),kind=kindNode?.textContent.trim()||'major';
   if(kind==='none')return {name:'N.C.',root:0,intervals:[],bass:null};
@@ -3935,7 +3971,8 @@ function parseMxHarmony(el,transpose){
   const bass=mxChild(el,'bass'),bassStep=mxText(bass,'bass-step');
   const bassPC=bassStep in mxSteps?((mxSteps[bassStep]+Number(mxText(bass,'bass-alter','0'))+transpose)%12+12)%12:null;
   const written=transpose===0?step+(alter<0?'♭'.repeat(-alter):'♯'.repeat(alter)):pitchNames[rootPC];
-  return {name:written+suffix+(bassPC===null?'':'/'+pitchNames[bassPC]),root:rootPC,intervals:[...new Set(intervals)],bass:bassPC};
+  const bassName=bassPC===null?null:transpose===0?bassStep+(Number(mxText(bass,'bass-alter','0'))<0?'♭'.repeat(-Number(mxText(bass,'bass-alter','0'))):'♯'.repeat(Number(mxText(bass,'bass-alter','0')))):pitchNames[bassPC];
+  return {name:written+formatMxChordSuffix(suffix)+(bassPC===null?'':'/'+bassName),root:rootPC,rootName:written,intervals:[...new Set(intervals)],bass:bassPC,bassName};
 }
 function mxTempo(direction){
   const sounds=[...(direction.localName==='sound'?[direction]:[]),...mxDesc(direction,'sound')];
@@ -4231,6 +4268,34 @@ function originalClick(at){
   source.onended=()=>{stopped=true;activeVoices.delete(stop);source.disconnect();};
   source.start(Math.max(at,ctx.currentTime));
 }
+function showOriginalHarmony(h){
+  if(!rootMarkerGroup)return;
+  rootMarkerGroup.replaceChildren();
+  game.titleName=h?.name||'';targetTitle.textContent=game.titleName;
+  game.rootPitchIndex=h&&h.intervals.length?(h.bass??h.root):-1;
+  if(!h||!h.intervals.length)return;
+  const slash=h.bass!==null;
+  positions.forEach(pos=>{
+    const pc=pos.midi%12;
+    const bassRoot=pc===(h.bass??h.root);
+    const chordRoot=slash&&pc===h.root;
+    if(!bassRoot&&!chordRoot)return;
+    // When both spellings share a pitch, red takes precedence.
+    const blue=chordRoot&&!bassRoot;
+    const circle=node('circle',{cx:pos.cx,cy:pos.cy,r:18,class:blue?'root-marker mx-chord-root':'root-marker'});
+    const label=node('text',{x:pos.cx,y:pos.cy+5,class:blue?'note root-note mx-chord-root-label':'note root-note'});
+    label.textContent=blue?(h.rootName||pitchNames[h.root]):slash?(h.bassName||pitchNames[h.bass]):(h.rootName||pitchNames[h.root]);
+    rootMarkerGroup.append(circle,label);
+  });
+}
+function updateOriginalAnswerHarmony(){
+  const q=game.originalQuestion;if(!q)return;
+  const index=Math.min(game.answers.length,q.notes.length-1);
+  const at=q.notes[index]?.start??0;
+  let harmony=null;
+  for(const h of q.chords){if(h.start<=at+1e-6)harmony=h;else break;}
+  showOriginalHarmony(harmony);
+}
 function originalChordNotes(h){
   if(!h.intervals.length)return [];
   const tone=instrumentMode==='original'?'guitar':'original';
@@ -4275,7 +4340,7 @@ async function playOriginalQuestion(){
     while(shown<events.length&&events[shown].at<=elapsed){
       const event=events[shown++];
       if(event.type==='click'){flashUntil=event.at+.14;game.target[0].cell.classList.add('count-in-flash');}
-      if(event.type==='chord')targetTitle.textContent=event.h.name;
+      if(event.type==='chord')showOriginalHarmony(event.h);
       if(event.type==='note'){
         if(result){
           positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
@@ -4294,7 +4359,7 @@ async function playOriginalQuestion(){
   if(generation!==gameGeneration)return;
   positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
   game.phase=result?'result':'guess';
-  if(result)showResult(false);else setStatus(null,t('guessFirstPrompt',game.target.length));
+  if(result)showResult(false);else {updateOriginalAnswerHarmony();setStatus(null,t('guessFirstPrompt',game.target.length));}
   startButton.disabled=replayButton.disabled=instrumentSelect.disabled=false;
   updateStartButton();refreshExtraUI();
 }
