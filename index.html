@@ -713,7 +713,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .summary-note{color:white;text-shadow:0 0 2px #245d70,0 0 2px #245d70;font-size:23px}
 .summary-note.entered{color:#ff8a24;text-shadow:0 0 3px #fff}
 .summary-bar{font-weight:bold;margin-left:4px}
-.cell.count-in-flash rect{fill:#fff!important;stroke:#fff!important;stroke-width:5!important;filter:drop-shadow(0 0 9px #fff)}
+.cell.count-in-flash rect{fill:#fff!important;stroke:#fff!important;stroke-width:2!important;filter:none!important}
 body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6cd 55%,#b8fff1)!important;color:#075d51!important;border-color:#d5fff5!important}
 
 /* Compact navigation and portrait spacing. */
@@ -1230,7 +1230,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
       }
       if(previousLevel!==endlessProgress.level){
-        endlessRootBag=[];chordTypeBag=[];melodyTypeBag=[];melodyTypeRule=null;scaleDeck=[];
+        endlessRootBag=[];melodyTypeBag=[];melodyTypeRule=null;
       }
     }
     function nextChordStartsOnRoot(){
@@ -1346,7 +1346,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       { name: 'Diminished Scale (WH)', intervals: [0, 2, 3, 5, 6, 8, 9, 11, 12] }
     ];
 
-    let scaleDeck = [];
+    const usedScaleShapes = new Set();
 
     function updateStartButton() {
       const answering=game.phase==='guess';
@@ -1469,17 +1469,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     throw new Error('No playable melody phrase');
   }
 
-    function resetScaleDeck() {
-      scaleDeck = [];
-      jazzScaleDefinitions.forEach(scaleDef => {
-        scaleDeck.push({ scaleDef, isDescending: false });
-        scaleDeck.push({ scaleDef, isDescending: true });
-      });
-
-      for (let i = scaleDeck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [scaleDeck[i], scaleDeck[j]] = [scaleDeck[j], scaleDeck[i]];
+    // Page-lifetime history: refill only the currently eligible range.
+    // Shapes are scale intervals plus direction; changing key does not make a new shape.
+    function scaleShapeKey(item) {
+      return item.scaleDef.intervals.join(',') + ':' + item.isDescending;
+    }
+    function unseenInRange(items, used, key) {
+      if (items.every(item => used.has(key(item)))) {
+        items.forEach(item => used.delete(key(item)));
       }
+      return items.filter(item => !used.has(key(item)));
+    }
+    function availableScaleShapes() {
+      const defs = jazzScaleDefinitions.filter(def => sessionMode === 'mix'
+        ? mixScaleAllowed(def) : difficulty().hard || jazzScaleDefinitions.indexOf(def) < 7);
+      const items = defs.flatMap(scaleDef => [false, true].map(isDescending => ({scaleDef, isDescending})));
+      return unseenInRange(items, usedScaleShapes, scaleShapeKey);
     }
 
     const x0 = 150, y0 = 56, boardWidth = 820, frets = 15;
@@ -2127,11 +2132,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     function makeGuitarChordQuestion(count, isRootFirst) {
-      if (!difficulty().hard) chordTypeBag = [];
-      else if (!chordTypeBag.length) chordTypeBag = shuffleMelodies(['basic','basic','basic','basic','basic','tension','tension','tension','tension','tension']);
-      const useTension = difficulty().hard && chordTypeBag.at(-1) === 'tension';
-      const defs = sessionMode==='mix'?mixedChordDefinitions():difficulty().hard ? (useTension ? tensionChordDefinitions : basicChordDefinitions)
-        : basicChordDefinitions.filter(def => def.name === '' || def.name === 'm');
+      const defs = availableChordTypes();
       const choices = shuffleMelodies(defs.flatMap(def => Array.from({ length:12 }, (_, rootPitchIndex) => ({ def, rootPitchIndex }))));
       for (const { def, rootPitchIndex } of choices) {
         const titleName = pitchNames[rootPitchIndex] + def.name;
@@ -2164,7 +2165,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           if (!extend([])) continue;
           recordChordFeature(sequence, rootPitchIndex, feature);
           lastChordName = titleName; lastChordShape = chordShape(sequence);
-          if (difficulty().hard) chordTypeBag.pop();
+          recordChordType(def);
           return { sequence, titleName, displayKey:titleName, rootPitchIndex,
             chordMidiNotes:form.map(note => note.midi), guitarChordForm:form };
         }
@@ -2190,7 +2191,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       return notes.at(-1) > highestFretboardMidi ? notes.map(midi => midi - 12) : notes;
     }
 
-    let chordTypeBag = [];
+    const usedChordTypes = new Set();
+    let lastChordType = null, sameChordTypeCount = 0;
+    function availableChordTypes() {
+      const defs = sessionMode === 'mix' ? mixedChordDefinitions() : difficulty().hard
+        ? [...basicChordDefinitions, ...tensionChordDefinitions] : basicChordDefinitions.slice(0, 2);
+      const easy = defs.length === 2 && defs.every(def => def.name === '' || def.name === 'm');
+      if (easy) return defs.filter(def => sameChordTypeCount < 2 || def.name !== lastChordType);
+      return unseenInRange(defs, usedChordTypes, def => def.name);
+    }
+    function recordChordType(def) {
+      usedChordTypes.add(def.name);
+      sameChordTypeCount = def.name === lastChordType ? sameChordTypeCount + 1 : 1;
+      lastChordType = def.name;
+    }
     let lastChordName = null;
     let lastChordShape = null;
     function chordShape(sequence) {
@@ -2199,15 +2213,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     function makeChordQuestion(count, isRootFirst) {
       if (instrumentMode === 'guitar') return makeGuitarChordQuestion(count, isRootFirst);
       let attempts = 0;
-      if (!difficulty().hard) chordTypeBag = [];
-      else if (!chordTypeBag.length) {
-        chordTypeBag = shuffleMelodies(['basic','basic','basic','basic','basic',
-          'tension','tension','tension','tension','tension']);
-      }
-      const useTension = difficulty().hard && chordTypeBag.at(-1) === 'tension';
-      const availableDefs = sessionMode==='mix'?mixedChordDefinitions():difficulty().hard
-        ? (useTension ? tensionChordDefinitions : basicChordDefinitions)
-        : basicChordDefinitions.filter(def => def.name === '' || def.name === 'm');
+      const availableDefs = availableChordTypes();
 
       const firstCandidates = positions.filter(pos => pos.fret >= 1 && pos.fret <= 10);
 
@@ -2302,7 +2308,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           recordChordFeature(validSeq, rootPitchIndex, feature);
           lastChordName = chordName;
           lastChordShape = chordShape(validSeq);
-          if (difficulty().hard) chordTypeBag.pop();
+          recordChordType(chordDef);
           return { sequence: validSeq, titleName: chordName, displayKey: chordName, rootPitchIndex, chordMidiNotes };
         }
       }
@@ -2316,17 +2322,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       while (outerAttempts < 50) {
         outerAttempts++;
 
-        if (scaleDeck.length === 0) {
-          resetScaleDeck();
-        }
-
-        // Preserve unseen advanced patterns while EASY repeats the seven modes.
-        const allowed=item=>sessionMode==='mix'?mixScaleAllowed(item.scaleDef):(difficulty().hard||jazzScaleDefinitions.indexOf(item.scaleDef)<7);
-        if(!scaleDeck.some(allowed))resetScaleDeck();
-        const eligibleIndex = scaleDeck.findIndex(allowed);
-        const item = eligibleIndex >= 0 ? scaleDeck.splice(eligibleIndex, 1)[0]
-          : { scaleDef: jazzScaleDefinitions[Math.floor(Math.random() * 7)], isDescending: Math.random() < .5 };
-        updateDeckCounterDisplay();
+        const available = availableScaleShapes();
+        const item = available[Math.floor(Math.random() * available.length)];
 
         const scaleDef = item.scaleDef;
         const isDescending = item.isDescending;
@@ -2362,6 +2359,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
           if (possible) {
             const finalSequence = isDescending ? [...ascendingSequence].reverse() : ascendingSequence;
+            usedScaleShapes.add(scaleShapeKey(item));
+            updateDeckCounterDisplay();
 
             return {
               sequence: finalSequence,
@@ -3550,7 +3549,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     endGesture();stopHeldNote(currentHeldPosition);activeVoices.forEach(stop=>stop());clearBoardMarks();
     closeThemeDialog();
     resetRoundProgress();
-    chordTypeBag=[];lastChordName=lastChordShape=null;melodyTypeBag=[];melodyTypeRule=null;lastMelodyKey=null;
+    lastChordName=lastChordShape=null;melodyTypeBag=[];melodyTypeRule=null;lastMelodyKey=null;
     // Melody history survives round resets.
     game={mode:questionTypeSelect.value,phase:'idle',target:[],answers:[],titleName:'',displayKey:'',rootPitchIndex:null,chordMidiNotes:[]};
     celebrationKind='normal';
@@ -3687,7 +3686,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     scrollGesture = null;
     instrumentMode = instrumentSelect.value;
     strings = makeStrings();
-    scaleDeck = []; chordTypeBag = []; lastChordName = lastChordShape = null;
+    lastChordName = lastChordShape = null;
     melodyTypeBag = []; melodyTypeRule = null; lastMelodyKey = null;
     // Melody history is shared across instruments.
     game = { mode:questionTypeSelect.value, phase:'idle', target:[], answers:[], titleName:'', displayKey:'', rootPitchIndex:-1, chordMidiNotes:[] };
@@ -3709,7 +3708,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     mixCorrect={chord:0,scale:0,melody:0};resetScaleSpeedBoost();resetEndlessProgress();roundStats={total:0,correct:0,streak:0};roundEvent='normal';mixSectionSeen=-1;
     Object.values(difficultyStates).forEach(state=>{state.hard=false;state.correct=0;state.wrong=0;});
     Object.keys(feverPeaks).forEach(mode=>{feverPeaks[mode]=0;oniCompleted[mode]=false;});
-    scaleDeck=[];updateSettingsUI();
+    updateSettingsUI();
   }
   const endlessCheers={
     ja:['すごーい！','ご〜いす〜！','イルカもジャンプで大拍手！','ラッコもびっくり、貝を落とした！','マンタも宙返りでお祝い！','タコも八本足で拍手〜！','クジラも歌うよ、ブラボー！','海の底まで、どよめきドーン！','幻のダイオウイカも認めた！超レア級！'],
@@ -3936,18 +3935,31 @@ async function readMxlFile(file){
 const mxSteps={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 const mxKinds={major:['',[0,4,7]],minor:['m',[0,3,7]],augmented:['aug',[0,4,8]],diminished:['dim',[0,3,6]],dominant:['7',[0,4,7,10]],'major-seventh':['maj7',[0,4,7,11]],'minor-seventh':['m7',[0,3,7,10]],'diminished-seventh':['dim7',[0,3,6,9]],'half-diminished':['m7♭5',[0,3,6,10]],'major-minor':['m(maj7)',[0,3,7,11]],'major-sixth':['6',[0,4,7,9]],'minor-sixth':['m6',[0,3,7,9]],'dominant-ninth':['9',[0,4,7,10,14]],'major-ninth':['maj9',[0,4,7,11,14]],'minor-ninth':['m9',[0,3,7,10,14]],'dominant-11th':['11',[0,4,7,10,14,17]],'major-11th':['maj11',[0,4,7,11,14,17]],'minor-11th':['m11',[0,3,7,10,14,17]],'dominant-13th':['13',[0,4,7,10,14,21]],'major-13th':['maj13',[0,4,7,11,14,21]],'minor-13th':['m13',[0,3,7,10,14,21]],'suspended-second':['sus2',[0,2,7]],'suspended-fourth':['sus4',[0,5,7]],power:['5',[0,7]],none:['N.C.',[]]};
 function formatMxChordSuffix(suffix){
+  // Only a triad with one added tone uses an unparenthesized "add".
+  const triadAdd=suffix.match(/^(m|dim|aug|sus2|sus4)?(?:\(add([♭♯b#]?\d+)\)|add([♭♯b#]?\d+))$/);
+  if(triadAdd)return (triadAdd[1]||'')+'add'+(triadAdd[2]||triadAdd[3]);
+  suffix=suffix.replace(/\(([^()]*)\)/g,(_,group)=>'('+group.replace(/add(?=[♭♯b#]?\d+)/g,'')+')')
+    .replace(/add([♭♯b#]?\d+)/g,'($1)');
   const match=suffix.match(/^(.*?7)(.*)$/);
-  if(!match)return suffix;
-  let head=match[1],tail=match[2];
-  // Preserve the quality notation in m(maj7) before grouping its extensions.
-  if(head.includes('(')&&tail.startsWith(')')){head+=')';tail=tail.slice(1);}
-  const tones=[];
-  const rest=tail.replace(/sus[24]|no\d+|(?:add)?[♭♯b#]?\d+/g,token=>{
-    if(token.startsWith('sus'))return token;
-    tones.push(token.replace(/^add/,''));return '';
-  });
-  if(!tones.length)return suffix;
-  return head+rest.replace(/[(),\s]/g,'')+'('+[...new Set(tones)].join(',')+')';
+  if(match){
+    let head=match[1],tail=match[2];
+    if(head.includes('(')&&tail.startsWith(')')){head+=')';tail=tail.slice(1);}
+    const tones=[];
+    const rest=tail.replace(/sus[24]|no\d+|[♭♯b#]?\d+/g,token=>{
+      if(token.startsWith('sus'))return token;
+      tones.push(token);return '';
+    });
+    if(tones.length)return head+rest.replace(/[(),\s]/g,'')+'('+[...new Set(tones)].join(',')+')';
+  }
+  // Combine adjacent extension groups, leaving m(maj7) quality notation intact.
+  return suffix.replace(/\((?:no)?[♭♯b#]?\d+(?:,[^()]*)?\)(?:\((?:no)?[♭♯b#]?\d+(?:,[^()]*)?\))*/g,
+    groups=>'('+[...new Set(groups.match(/(?:no)?[♭♯b#]?\d+/g))].join(',')+')');
+}
+function mxMajorNinthSpec(kind, text){
+  // Some exporters put the symbol in kind/text rather than the MusicXML kind name.
+  return /^(?:maj9|Maj9|M9|MA9|ma9|Δ9|△9)$/.test(kind)
+    || (kind==='other' && /^(?:maj9|Maj9|M9|MA9|ma9|Δ9|△9)$/.test(text))
+    ? mxKinds['major-ninth'] : null;
 }
 function parseMxHarmony(el,transpose){
   const kindNode=mxChild(el,'kind'),kind=kindNode?.textContent.trim()||'major';
@@ -3956,7 +3968,7 @@ function parseMxHarmony(el,transpose){
   if(!(step in mxSteps)) mxError('音名で指定したコード（C、Dmなど）を使用してください。','Use chord names such as C or Dm.');
   const alter=Number(mxText(root,'root-alter','0'));
   const rootPC=((mxSteps[step]+alter+transpose)%12+12)%12;
-  const spec=mxKinds[kind];
+  const spec=mxKinds[kind]||mxMajorNinthSpec(kind,kindNode?.getAttribute('text')||'');
   if(!spec && kind!=='other')mxError('未対応のコード種類です：'+kind,'Unsupported chord kind: '+kind);
   let intervals=spec?[...spec[1]]:[],suffix=kindNode?.getAttribute('text')||spec?.[0]||'';
   for(const degree of mxChildren(el,'degree')){
@@ -4386,8 +4398,8 @@ function showSpecialEnding(){
 function setMixLevel(level,randomSelection=false){
   if(!randomSelection)mixRandomLevel=false;
   mixLevel=level;
-  // Refill question pools so the previous level cannot leak into the next question.
-  scaleDeck=[];chordTypeBag=[];melodyTypeBag=[];melodyTypeRule=null;
+  // Refresh melody categories; chord/scale histories survive level changes.
+  melodyTypeBag=[];melodyTypeRule=null;
   noteCountSelect.value=String(mixLevel+2);
   refreshExtraUI();syncArcadeUI();updateDeckCounterDisplay();
 }
