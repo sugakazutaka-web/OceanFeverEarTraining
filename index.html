@@ -755,6 +755,8 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
 .practice-dialog p{font-size:clamp(15px,4vw,20px);line-height:1.7;}
 #practice-speech:focus{outline:none;}
 @media(max-height:500px) and (orientation:landscape){.practice-dialog .practice-face{width:86px;height:86px;}}
+.practice-dialog.tour-notice p{font-size:clamp(18px,4.5vw,22px);}
+.tour-notice .cheer-phrase{display:block;}
 </style>
 </head>
 <body>
@@ -4098,9 +4100,13 @@ function recordPracticeChord(def,sequence,plan){
   let practiceStageTimer;
   function showPracticeStage(advanced){
     clearTimeout(practiceStageTimer);clearArcade();
-    if(!advanced)playWarpJingle();
+    if(advanced!==true)playWarpJingle();
+    practiceStageDialog.classList.toggle('tour-notice',advanced==='all');
     if(appSettings.lang==='on')practiceStageSpeech.textContent=advanced?'Now try four-note chords♪':'Let’s start with 5 triad questions♪';
     else appendCheerPhrases(practiceStageSpeech,advanced?['ここからは4和音の','問題だよ♪']:['最初は3和音から','5問出題するよ♪']);
+    if(advanced==='all')appendCheerPhrases(practiceStageSpeech,appSettings.lang==='on'
+      ? ['Let’s explore','the 21 chord types','featured in this game♪']
+      : ['このゲームで出題される','21種類のコード・タイプを','体験しよう♪']);
     practiceStageDialog.showModal();
     practiceStageTimer=setTimeout(()=>{practiceStageDialog.close();},3000);
   }
@@ -4112,7 +4118,7 @@ function recordPracticeChord(def,sequence,plan){
     game={mode:'chord',phase:'idle',target:[],answers:[],titleName:'',displayKey:'',rootPitchIndex:null,chordMidiNotes:[]};
     clearBoardMarks();updateOriginalInstrumentChoices();updateUIControls();updateStartButton();syncArcadeUI();setStatus(null,t('initialMsg'));
     practiceDialog.close();welcomeDialog.close();
-    if(variant==='c')showPracticeStage(false);else playWarpJingle();
+    showPracticeStage(variant==='all'?'all':false);
   }
   practiceCButton.addEventListener('click',()=>startPractice('c'));
   practiceAllButton.addEventListener('click',()=>startPractice('all'));
