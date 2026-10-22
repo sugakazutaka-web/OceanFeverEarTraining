@@ -756,7 +756,11 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
 #practice-speech:focus{outline:none;}
 @media(max-height:500px) and (orientation:landscape){.practice-dialog .practice-face{width:86px;height:86px;}}
 .practice-dialog.tour-notice p{font-size:clamp(18px,4.5vw,22px);}
-.tour-notice .cheer-phrase{display:block;}
+/* Block phrase lines need no interleaved inline break opportunities: those
+   can create extra anonymous lines between the visible comment lines. */
+#practice-stage-speech{font-size:clamp(18px,4.5vw,22px);line-height:1.65;white-space:normal;margin:12px 0 0;}
+.tour-notice #practice-stage-speech>wbr{display:none;}
+.tour-notice .cheer-phrase{display:block;margin:0;padding:0;}
 </style>
 </head>
 <body>
