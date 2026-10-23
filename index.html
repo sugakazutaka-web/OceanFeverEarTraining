@@ -423,7 +423,7 @@ body.fever-oni {background:radial-gradient(ellipse at top,#bf80b633,transparent 
 body.fever-oni .instrument {background:linear-gradient(130deg,#285972,#304e72);}
 
 #root-markers {pointer-events:none;}
-#root-markers .root-note {font-size:16px;font-weight:800;fill:#fff4e5;stroke:none;stroke-width:0;paint-order:normal;}
+#root-markers .root-note {font-size:17px;font-weight:500;fill:#fff4e5;stroke:none;stroke-width:0;paint-order:normal;}
 @media (orientation:portrait) {
   #ending-title .ending-congratulations {display:block;white-space:nowrap;}
 }
@@ -2022,6 +2022,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           });
           const rootLabel=node('text',{x:pos.cx,y:pos.cy+5,class:'note root-note'});
           rootLabel.textContent=noteName(pos.midi);
+          if(rootLabel.textContent.length>1)rootLabel.style.fontSize='16px';
           rootMarkerGroup.append(circle,rootLabel);
         }
       });
@@ -4645,6 +4646,7 @@ function showOriginalHarmony(h){
     const circle=node('circle',{cx:pos.cx,cy:pos.cy,r:18,class:blue?'root-marker mx-chord-root':'root-marker'});
     const label=node('text',{x:pos.cx,y:pos.cy+5,class:blue?'note root-note mx-chord-root-label':'note root-note'});
     label.textContent=blue?(h.rootName||pitchNames[h.root]):slash?(h.bassName||pitchNames[h.bass]):(h.rootName||pitchNames[h.root]);
+    if(label.textContent.length>1)label.style.fontSize='16px';
     rootMarkerGroup.append(circle,label);
   });
 }
