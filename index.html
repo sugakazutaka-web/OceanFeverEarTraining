@@ -4545,7 +4545,17 @@ async function showModeAnnouncement(phrases,english,duration){
   const img=document.createElement('img');img.src=mascotImage;img.alt=appSettings.lang==='on'?'Coral':'コーラル';portrait.append(img);
   const speech=document.createElement('div');speech.className='oni-speech';
   if(appSettings.lang==='on'){speech.textContent=english;speech.style.whiteSpace='pre-line';}
-  else phrases.forEach(p=>{const span=document.createElement('span');span.className='semantic-line';span.textContent=p;speech.append(span);});
+  else phrases.forEach(p=>{
+    const line=document.createElement('span');line.className='semantic-line';
+    if(Array.isArray(p)){
+      line.style.whiteSpace='normal';
+      p.forEach((phrase,index)=>{
+        if(index)line.append(document.createElement('wbr'));
+        const span=document.createElement('span');span.style.display='inline-block';span.style.whiteSpace='nowrap';span.textContent=phrase;line.append(span);
+      });
+    }else line.textContent=p;
+    speech.append(line);
+  });
   banner.append(portrait,speech);arcadeLayer.append(banner);
   await wait(duration);banner.remove();
   if(generation!==gameGeneration)return false;
@@ -4566,8 +4576,8 @@ async function prepareMixedQuestion(){
   const showIntro=mixSectionSeen===-1 && roundStats.total===0;
   mixSectionSeen=section;
   if(showIntro){
-    const phrases=['コード5問、スケール5問、','メロディ5問の全15問。','さあ、いっくよー！'];
-    const english="5 chord questions, 5 scale questions,\n5 melody questions — 15 in total.\nLet’s go!";
+    const phrases=[['コード、','スケール、','メロディ問題から','それぞれ5問だよ。'],'さあ、いっくよー！'];
+    const english="You’ll get 5 questions each on chords, scales, and melodies.\nLet’s go!";
     return showModeAnnouncement(phrases,english,4000);
   }
   return true;
