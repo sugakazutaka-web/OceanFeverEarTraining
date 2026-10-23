@@ -761,6 +761,18 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
 #practice-stage-speech{font-size:clamp(18px,4.5vw,22px);line-height:1.65;white-space:normal;margin:12px 0 0;}
 .tour-notice #practice-stage-speech>wbr{display:none;}
 .tour-notice .cheer-phrase{display:block;margin:0;padding:0;}
+/* Keep Coral above playback so the chord name retains the remaining width. */
+.status-container{gap:6px;}
+.chord-row{flex-direction:row;align-items:center;}
+.chord-actions{align-self:flex-end;gap:4px;}
+.chord-actions .resident-mascot.coral-portrait{
+  width:64px;height:64px;align-self:center;transform:none;
+}
+@media(min-width:651px) and (orientation:landscape){
+  .top-controls{grid-template-rows:14px 120px 56px minmax(46px,1fr);row-gap:6px;}
+  .chord-row{height:120px;}
+  .chord-actions .resident-mascot.coral-portrait{width:76px;height:76px;}
+}
 </style>
 </head>
 <body>
@@ -2534,8 +2546,6 @@ function recordPracticeChord(def,sequence,plan){
 
 
     const allChordTourOrder=['','m','maj7','m7','7','m7♭5','dim','aug','sus4','add9','6/9','maj9','m(add9)','m9','m11','9','7(♭9)','7(♯9)','7(♯11)','13','7(♭13)'];
-    // Independent page-lifetime interval history; retained across retries/instrument changes.
-    const allChordTourIntervals=new Map();
     function allChordTourDefinition(index){
       const name=allChordTourOrder[index];
       const def=[...basicChordDefinitions,...tensionChordDefinitions].find(d=>d.name===name);
@@ -2544,34 +2554,21 @@ function recordPracticeChord(def,sequence,plan){
     }
     function makeAllChordTourQuestion(index){
       const def=allChordTourDefinition(index);
-      // Extensions retain their compound octave. A sixth is nine semitones.
-      const intervals=def.intervals.filter(n=>def.isTension?n>=9:n>0);
-      let history=allChordTourIntervals.get(def.name);
-      if(!history){history={remaining:[],last:null};allChordTourIntervals.set(def.name,history);}
-      if(!history.remaining.length)history.remaining=shuffleMelodies(intervals);
-      const choices=history.remaining.filter(n=>intervals.length===1||n!==history.last);
-      const interval=choices[0]??history.remaining[0];
       const root=positions.find(p=>p.string.number===(instrumentMode==='guitar'?5:4)&&p.fret===(instrumentMode==='guitar'?3:8));
       if(!root)throw new Error('C root position unavailable');
-      const targetMidi=root.midi+interval;
-      let candidates=positions.filter(p=>p.midi===targetMidi);
-      let form=null;
-      if(instrumentMode==='guitar'){
-        const forms=guitarChordForms(0,def.intervals);
-        if(!forms.length)throw new Error('No playable chord tour voicing');
-        form=forms.find(f=>f.some(n=>n.stringIndex===4&&n.fret===3)&&f.some(n=>n.midi===targetMidi))||forms[0];
-        // Prefer notes in the chord voicing when it also includes the fixed C anchor.
-        // Some chords (e.g. Cm11) use a different valid voicing for chord playback.
-        if(form.some(n=>n.stringIndex===4&&n.fret===3)){
-          const matching=candidates.filter(p=>form.some(n=>n.midi===p.midi&&n.stringIndex+1===p.string.number&&n.fret===p.fret));
-          if(matching.length)candidates=matching;
-        }
-      }
-      candidates.sort((a,b)=>Math.abs(a.fret-root.fret)-Math.abs(b.fret-root.fret)||a.string.number-b.string.number);
-      if(!candidates.length)throw new Error('Chord tour target unavailable');
+      // Ascending chord tones are independent of the guitar's chord voicing.
+      // Keep ninths, elevenths and thirteenths in their compound octave.
+      const sequence=[...new Set(def.intervals)].sort((a,b)=>a-b).map(interval=>{
+        if(interval===0)return root;
+        const candidates=positions.filter(p=>p.midi===root.midi+interval);
+        candidates.sort((a,b)=>Math.abs(a.fret-root.fret)-Math.abs(b.fret-root.fret)||a.string.number-b.string.number);
+        if(!candidates.length)throw new Error('Chord tour tone unavailable');
+        return candidates[0];
+      });
+      const form=instrumentMode==='guitar'?guitarChordForms(0,def.intervals)[0]:null;
+      if(instrumentMode==='guitar'&&!form)throw new Error('No playable chord tour voicing');
       const chordMidiNotes=form?form.map(n=>n.midi):chordPlaybackNotes(0,def.intervals,root.midi);
-      history.remaining.splice(history.remaining.indexOf(interval),1);history.last=interval;
-      return {sequence:[root,candidates[0]],titleName:'C'+def.name,displayKey:'C'+def.name,rootPitchIndex:0,chordMidiNotes,guitarChordForm:form};
+      return {sequence,titleName:'C'+def.name,displayKey:'C'+def.name,rootPitchIndex:0,chordMidiNotes,guitarChordForm:form};
     }
 
     function makeScaleQuestion() {
@@ -3175,7 +3172,7 @@ function recordPracticeChord(def,sequence,plan){
   const residentMascot = document.createElement('span');
   residentMascot.className='resident-mascot coral-portrait';residentMascot.hidden=true;
   const residentPortrait=document.createElement('img');residentPortrait.src=mascotImage;residentPortrait.alt='Coral / コーラル';residentMascot.append(residentPortrait);
-  playChordBtn.parentNode.parentNode.insertBefore(residentMascot,playChordBtn.parentNode);
+  playChordBtn.parentNode.insertBefore(residentMascot,playChordBtn);
   const feverPeaks = roundProgress.fever;
   const feverRibbon = document.createElement('div');
   feverRibbon.className = 'fever-ribbon';
@@ -4502,7 +4499,7 @@ function refreshExtraUI(){
     extraTypeSelect.options[0].textContent=en?'Original':'オリジナル';extraTypeSelect.disabled=true;
   }else if(practiceMode()){
     if(extraTypeSelect.dataset.mode!=='practice'){extraTypeSelect.replaceChildren(new Option('','chord'));extraTypeSelect.dataset.mode='practice';}
-    extraTypeSelect.options[0].textContent=en?'Chord / 2 notes':'コード／2音';extraTypeSelect.disabled=true;
+    extraTypeSelect.options[0].textContent=practiceVariant==='all'?(en?'Chord tones':'コード構成音'):(en?'Chord / 2 notes':'コード／2音');extraTypeSelect.disabled=true;
   }
   if(custom||mix||practiceMode())noteCountGroup.style.display='none';
   if(practiceMode())firstNoteGroup.style.display='none';
