@@ -2972,7 +2972,7 @@ function recordPracticeChord(def,sequence,plan){
       boardHeight = strings.length * 55;
       updateBoardViewport();
       document.body.dataset.instrument = instrumentMode;
-    svg.append(node('rect', { x: x0, y: y0, width: boardWidth, height: boardHeight, fill: '#4c2d20' }));
+    svg.append(node('rect', { x: x0, y: y0, width: boardWidth, height: boardHeight }));
     for (let fret = 0; fret <= frets; fret++) {
       const x = fretX(fret);
       svg.append(node('line', { x1: x, y1: y0, x2: x, y2: y0 + boardHeight, stroke: fret === 0 ? '#f2ddba' : '#8f8174', 'stroke-width': fret === 0 ? 10 : 3 }));
