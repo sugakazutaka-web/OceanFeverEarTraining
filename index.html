@@ -423,7 +423,10 @@ body.fever-oni {background:radial-gradient(ellipse at top,#bf80b633,transparent 
 body.fever-oni .instrument {background:linear-gradient(130deg,#285972,#304e72);}
 
 #root-markers {pointer-events:none;}
-#root-markers .root-note {font-size:17px;font-weight:500;fill:#fff4e5;stroke:none;stroke-width:0;paint-order:normal;}
+/* Opaque interiors separate the labels from strings on every screen size. */
+#root-markers .root-marker{fill:#592629;}
+#root-markers .root-marker.mx-chord-root{fill:#173b59;}
+#root-markers .root-note {font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:400;font-synthesis:none;fill:#fff4e5;stroke:none;stroke-width:0;paint-order:normal;}
 @media (orientation:portrait) {
   #ending-title .ending-congratulations {display:block;white-space:nowrap;}
 }
@@ -2978,7 +2981,6 @@ function recordPracticeChord(def,sequence,plan){
     [y0 + boardHeight / 4, y0 + boardHeight * 3 / 4].forEach(y => svg.append(node('circle', { cx: (fretX(11) + fretX(12)) / 2, cy: y, r: 7, fill: '#e8c792' })));
 
     rootMarkerGroup = node('g', { id: 'root-markers' });
-    svg.append(rootMarkerGroup);
 
     strings.forEach((string, index) => {
       const y = y0 + 28 + index * 55;
@@ -3020,6 +3022,8 @@ function recordPracticeChord(def,sequence,plan){
       }
     });
 
+      // Draw labels above strings and cells; pointer-events:none preserves fret input.
+      svg.append(rootMarkerGroup);
       updateInstrumentTexts();
     }
     buildFretboard();
