@@ -1237,24 +1237,28 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     let mixCorrect={chord:0,scale:0,melody:0};
     let roundStats={total:0,correct:0,streak:0};
     let scaleSpeedBoost=false,scaleSpeedBeforeBoost=null;
-    let endlessProgress={level:0,levelStreak:0};
+    let endlessProgress={level:0,levelStreak:0,recentAnswers:[]};
     let endlessRootBag=[];
     function resetEndlessProgress(){
-      endlessProgress={level:0,levelStreak:0};endlessRootBag=[];
+      endlessProgress={level:0,levelStreak:0,recentAnswers:[]};endlessRootBag=[];
     }
     function updateEndlessProgress(correct){
       const previousLevel=endlessProgress.level;
-      if(!correct){
+      const recent=endlessProgress.recentAnswers;
+      recent.push(Boolean(correct));
+      if(recent.length>5)recent.shift();
+      endlessProgress.levelStreak=correct?Math.min(3,endlessProgress.levelStreak+1):0;
+      const threeWrong=recent.length>=3 && recent.slice(-3).every(answer=>!answer);
+      const interruptedWrong=recent.length===5 && recent.every((answer,index)=>answer===(index===2));
+      if(endlessProgress.levelStreak===3){
+        endlessProgress.level=Math.min(2,endlessProgress.level+1);
+      }else if(threeWrong||interruptedWrong){
         endlessProgress.level=Math.max(0,endlessProgress.level-1);
-        endlessProgress.levelStreak=0;
-      }else{
-        endlessProgress.levelStreak++;
-        if(endlessProgress.level<2 && endlessProgress.levelStreak>=5){
-          endlessProgress.level++;endlessProgress.levelStreak=0;
-        }
-
       }
       if(previousLevel!==endlessProgress.level){
+        // Judge the new level independently; the round's star streak is unchanged.
+        endlessProgress.levelStreak=0;
+        endlessProgress.recentAnswers=[];
         endlessRootBag=[];melodyTypeBag=[];melodyTypeRule=null;
       }
     }
