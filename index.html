@@ -773,6 +773,7 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
   .chord-row{height:120px;}
   .chord-actions .resident-mascot.coral-portrait{width:76px;height:76px;}
 }
+#practice-stage-speech{white-space:pre-line;}
 </style>
 </head>
 <body>
@@ -3313,8 +3314,7 @@ function recordPracticeChord(def,sequence,plan){
       celebrationKind=roundEvent==='finish'?'clear':sessionMode==='normal' && wasHard && !state.hard?'end':roundEvent;
       if(specialMode()||practiceMode())showArcadeResult(correct,false,'normal');
       if(roundEvent==='finish') scheduleGameEnding();
-      else if(sessionMode==='mix' && [5,10].includes(roundStats.total)) scheduleMixedAnnouncement();
-      else if(practiceMode() && practiceVariant==='c' && roundStats.total===5)showPracticeStage(true);
+
 
       else if(roundEvent==='challenge') beginRootChallenge();
       else if(roundEvent==='oni' && arcadeEnabled && !document.hidden){
@@ -3777,6 +3777,8 @@ function recordPracticeChord(def,sequence,plan){
     coralLiveLink.textContent=en?'Go to Coral’s live show':'ライブを見に行く';
     endingStats.hidden=endless || perfect;
     endingStats.textContent=en?`${roundStats.correct} correct out of ${roundLimit()}`:`${roundLimit()}問中${roundStats.correct}問正解`;
+    practiceRetry.hidden=!practiceMode();
+    practiceRetry.textContent=en?'Play again':'もう一度プレイする';
     endingOK.hidden=endless;
     endingCloseNote.textContent=en?'Please close the game screen.':'ゲーム画面を閉じてください。';
     endingCloseNote.hidden=!endless;
@@ -3802,6 +3804,7 @@ function recordPracticeChord(def,sequence,plan){
   }
 
   function returnToGameStart() {
+    practiceRetry.hidden=true;
     leavePracticeMode();
     closeCoralLive();
     clearEndingHint();
@@ -3828,6 +3831,16 @@ function recordPracticeChord(def,sequence,plan){
     showPopupFromTop(welcomeDialog,welcomeTitle);
   }
   endingOK.addEventListener('click',returnToGameStart);
+  const practiceRetry=document.createElement('button');
+  practiceRetry.type='button';practiceRetry.className='ending-ok primary-btn';practiceRetry.hidden=true;
+  endingOK.before(practiceRetry);
+  practiceRetry.addEventListener('click',()=>{
+    if(!endingActive || !practiceMode())return;
+    const variant=practiceVariant;
+    returnToGameStart();
+    startPractice(variant);
+  });
+
 
 
   // A modal keeps the result paused until the player answers and the reply finishes.
@@ -4107,8 +4120,7 @@ function recordPracticeChord(def,sequence,plan){
     clearTimeout(practiceStageTimer);clearArcade();
     if(advanced!==true)playWarpJingle();
     practiceStageDialog.classList.toggle('tour-notice',advanced==='all');
-    if(appSettings.lang==='on')practiceStageSpeech.textContent=advanced?'Now try four-note chords♪':'Let’s start with 5 triad questions♪';
-    else appendCheerPhrases(practiceStageSpeech,advanced?['ここからは4和音の','問題だよ♪']:['最初は3和音から','5問出題するよ♪']);
+    practiceStageSpeech.textContent=appSettings.lang==='on'?'First, 5 triad questions,\nthen 10 four-note chord questions♪':'最初に3和音から5問、\n次に4和音から10問出題するよ♪';
     if(advanced==='all')appendCheerPhrases(practiceStageSpeech,appSettings.lang==='on'
       ? ['Let’s explore','the 21 chord types','featured in this game♪']
       : ['このゲームで出題される','21種類のコード・タイプを','体験しよう♪']);
@@ -4532,7 +4544,7 @@ async function showModeAnnouncement(phrases,english,duration){
   const portrait=document.createElement('div');portrait.className='coral-portrait';
   const img=document.createElement('img');img.src=mascotImage;img.alt=appSettings.lang==='on'?'Coral':'コーラル';portrait.append(img);
   const speech=document.createElement('div');speech.className='oni-speech';
-  if(appSettings.lang==='on')speech.textContent=english;
+  if(appSettings.lang==='on'){speech.textContent=english;speech.style.whiteSpace='pre-line';}
   else phrases.forEach(p=>{const span=document.createElement('span');span.className='semantic-line';span.textContent=p;speech.append(span);});
   banner.append(portrait,speech);arcadeLayer.append(banner);
   await wait(duration);banner.remove();
@@ -4547,22 +4559,16 @@ async function announceMixedSection(preserveStartSound=false){
   instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=false;
   updateStartButton();syncArcadeUI();
 }
-function scheduleMixedAnnouncement(){
-  const generation=gameGeneration,completedGame=game;
-  startButton.disabled=replayButton.disabled=playChordBtn.disabled=instrumentSelect.disabled=questionTypeSelect.disabled=noteCountSelect.disabled=firstNoteControls.disabled=true;
-  setTimeout(()=>{
-    if(generation===gameGeneration && game===completedGame)runPlayback(announceMixedSection);
-  },arcadeEnabled&&!document.hidden?2900:0);
-}
 async function prepareMixedQuestion(){
   const section=Math.min(2,Math.floor(roundStats.total/5));
   questionTypeSelect.value=['chord','scale','melody'][section];noteCountSelect.value=String(mixLevel+2);
   updateUIControls();
-  if(mixSectionSeen!==section){
-    mixSectionSeen=section;
-    const phrases=[['最初はコード問題、','いっくよー！'],['次はスケール問題、','がんばって！'],['最後はメロディ問題で','フィーバーだー！']][section];
-    const english=["Chords first! Let's go!","Scales next! You've got this!","Melodies last! Let's bring on the fever!"][section];
-    return showModeAnnouncement(phrases,english,3000);
+  const showIntro=mixSectionSeen===-1 && roundStats.total===0;
+  mixSectionSeen=section;
+  if(showIntro){
+    const phrases=['コード5問、スケール5問、','メロディ5問の全15問。','さあ、いっくよー！'];
+    const english="5 chord questions, 5 scale questions,\n5 melody questions — 15 in total.\nLet’s go!";
+    return showModeAnnouncement(phrases,english,4000);
   }
   return true;
 }
