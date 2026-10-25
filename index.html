@@ -2636,28 +2636,52 @@ function recordPracticeChord(def,sequence,plan){
       throw new Error('No playable scale question');
     }
 
-    function findCloseFretForTarget(targetPos) {
-      if (!game.target || game.target.length === 0) return targetPos;
-
+    function findCloseFretForTarget(targetPos, answerIndex) {
       const candidates = positions.filter(pos => pos.midi === targetPos.midi);
       if (candidates.length === 0) return targetPos;
 
-      const userRootAns = game.answers.find(ans => ans.midi % 12 === game.rootPitchIndex);
-      const targetRootPos = game.target.find(pos => pos.midi % 12 === game.rootPitchIndex);
-      
-      const refRootFret = userRootAns ? userRootAns.fret : (targetRootPos ? targetRootPos.fret : null);
-      
-      const avgFret = game.target.reduce((sum, pos) => sum + pos.fret, 0) / game.target.length;
+      // Keep corrections in the player's local fingering, independent of the
+      // hidden question fingering or which octave of the root was played first.
+      const references = [];
+      const answer = game.answers[answerIndex];
+      if (answer) references.push({ position: answer, weight: 2 });
+      const previous = game.answers[answerIndex - 1];
+      const next = game.answers[answerIndex + 1];
+      if (previous) references.push({ position: previous, weight: 1 });
+      if (next) references.push({ position: next, weight: 1 });
 
+      // A timed round can end before this note has an answer. Use the nearest
+      // answered step when neither immediate neighbour is available.
+      if (!references.length) {
+        let nearest = null;
+        let nearestDistance = Infinity;
+        game.answers.forEach((position, index) => {
+          const distance = Math.abs(index - answerIndex);
+          if (position && distance < nearestDistance) {
+            nearest = position;
+            nearestDistance = distance;
+          }
+        });
+        if (nearest) references.push({ position: nearest, weight: 1 });
+      }
+      if (!references.length) return targetPos;
+
+      // Count both fret and string movement. A fret step costs twice a string
+      // step; the mistaken note has twice the weight of either neighbour.
+      const distance = (a, b) => 2 * Math.abs(a.fret - b.fret)
+        + Math.abs(a.string.number - b.string.number);
+      const score = position => references.reduce((sum, ref) =>
+        sum + ref.weight * distance(position, ref.position), 0);
       candidates.sort((a, b) => {
-        if (refRootFret !== null) {
-          const diffA = Math.abs(a.fret - refRootFret);
-          const diffB = Math.abs(b.fret - refRootFret);
-          if (diffA !== diffB) return diffA - diffB;
+        const difference = score(a) - score(b);
+        if (difference) return difference;
+        // Equal local paths prefer the smaller change to the mistaken note.
+        if (answer) {
+          const correctionDifference = distance(a, answer) - distance(b, answer);
+          if (correctionDifference) return correctionDifference;
         }
-        return Math.abs(a.fret - avgFret) - Math.abs(b.fret - avgFret);
+        return a.string.number - b.string.number || a.fret - b.fret;
       });
-
       return candidates[0];
     }
 
@@ -2735,7 +2759,7 @@ function recordPracticeChord(def,sequence,plan){
             activePos = userAns;
             isNoteCorrect = true;
           } else {
-            activePos = findCloseFretForTarget(game.target[i]);
+            activePos = findCloseFretForTarget(game.target[i], i);
             isNoteCorrect = false;
           }
         }
@@ -2810,7 +2834,7 @@ function recordPracticeChord(def,sequence,plan){
       game.target.forEach((target,idx)=>{
         const ans=game.answers[idx];
         if(ans&&ans.midi===target.midi)ans.cell.classList.add('correct');
-        else if(ans||specialMode())findCloseFretForTarget(target).cell.classList.add('wrong');
+        else if(ans||specialMode())findCloseFretForTarget(target, idx).cell.classList.add('wrong');
       });
 
       targetTitle.textContent = questionTitle();
@@ -4711,7 +4735,7 @@ async function playOriginalQuestion(){
         if(result){
           positions.forEach(p=>p.cell.classList.remove('playing-correct','playing-wrong'));
           const answer=game.answers[event.i],correct=answer&&answer.midi===game.target[event.i].midi;
-          const active=correct?answer:findCloseFretForTarget(game.target[event.i]);
+          const active=correct?answer:findCloseFretForTarget(game.target[event.i], event.i);
           active.cell.classList.add(correct?'playing-correct':'playing-wrong');
         }
         else if(event.i===0)game.target[0].cell.classList.add('computer-first');
