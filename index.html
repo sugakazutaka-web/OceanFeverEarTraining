@@ -203,7 +203,7 @@ main { position:relative; isolation:isolate;}
 .header-tag:before { background:#ffe277; box-shadow:0 0 12px #ffe277;}
 #fx-toggle { min-height:32px; font-size:10px; padding:5px 10px; background:#082e56; border-color:#54cfe9; color:#c9f8ff;}
 .top-controls { background:radial-gradient(ellipse at 50% 0%,#087c9e88,transparent 75%),linear-gradient(135deg,#052b58,#051b42); border-color:#80eaff; box-shadow:inset 0 0 18px #27cfff22,0 0 0 2px #c88c2433,0 0 22px #20caff18;}
-.top-controls:before { content:"✦ OCEAN STAGE ✦"; color:#92e7ff;}
+.top-controls:before { content:"✦ " attr(data-session-name) " ✦"; color:#92e7ff;}
 #target-title { color:#fff1ad; text-shadow:0 3px #8c5a16,0 0 22px #ffcf4444;}
 #status-box { background:#001332aa; border-color:#40c7ed55; color:#c7efff;}
 #status-box.status-correct { background:#194538; border-color:#ffe87c; color:#fff0a9; text-shadow:0 0 14px #ffdd62;}
@@ -777,6 +777,17 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
   .chord-actions .resident-mascot.coral-portrait{width:76px;height:76px;}
 }
 #practice-stage-speech{white-space:pre-line;}
+
+/* Larger settings text, within the existing button dimensions. */
+.settings-popup .setting-opt-btn {
+  font-size:14px; font-weight:400; line-height:20px; min-width:0;
+  white-space:nowrap; overflow-wrap:normal;
+}
+.settings-popup .setting-item label { font-size:12px; }
+#label-instrument,#label-q-type,#label-note-count { font-size:12px; }
+.settings-row label,.settings-row select,.settings-popup h3,#open-settings,
+.settings-row:before { font-weight:400; }
+.top-controls:before { font-size:12px; line-height:14px; }
 </style>
 </head>
 <body>
@@ -871,7 +882,7 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
 
         </div>
 
-        <div class="top-controls">
+        <div class="top-controls" data-session-name="Normal">
           <div class="action-row">
             <button id="start" class="primary-btn" type="button">▶ 問題を出す</button>
             <button id="replay" class="secondary" type="button" disabled>🔊 もう一度聴く</button>
@@ -3252,6 +3263,10 @@ function recordPracticeChord(def,sequence,plan){
     residentMascot.hidden=practiceMode() || !(sessionMode==='endless' || (arcadeEnabled && roundStats.streak>=15 && !oniPending && !oniPartyActive));
   }
   function syncArcadeUI() {
+    const sessionName = sessionMode === 'practice'
+      ? (practiceVariant === 'c' ? 'C-root mode' : 'All-chord experience')
+      : ({normal:'Normal',endless:'Marathon',mix:'Mix',mxl:'mxl'}[sessionMode] || 'Normal');
+    document.querySelector('.top-controls').dataset.sessionName = sessionName;
     updatePowerUI();
     refreshExtraUI();
     document.body.classList.toggle('endless-mode',sessionMode==='endless');
@@ -4879,6 +4894,34 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 extraUIReady=true;refreshExtraUI();
+
+// Fit long translated options while retaining padding and single-line labels.
+{
+  const measure = document.createElement('canvas').getContext('2d');
+  let pending = false;
+  function fitSettingText() {
+    pending = false;
+    for (const button of settingsPopup.querySelectorAll('.setting-opt-btn')) {
+      if (!button.clientWidth) continue;
+      const style = getComputedStyle(button);
+      const available = button.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 4;
+      measure.font = `${style.fontWeight} 14px ${style.fontFamily}`;
+      const width = measure.measureText(button.textContent.trim()).width;
+      const size = Math.min(14, Math.floor(14 * available / Math.max(1, width) * 10) / 10);
+      button.style.fontSize = `${Math.max(1, size)}px`;
+    }
+  }
+  function scheduleSettingText() {
+    if (!pending) { pending = true; requestAnimationFrame(fitSettingText); }
+  }
+  const resize = new ResizeObserver(scheduleSettingText);
+  settingsPopup.querySelectorAll('.setting-opt-btn').forEach(button => resize.observe(button));
+  new MutationObserver(scheduleSettingText).observe(settingsPopup, {subtree:true, childList:true, characterData:true});
+  window.addEventListener('resize', scheduleSettingText);
+  document.fonts.ready.then(scheduleSettingText);
+  scheduleSettingText();
+}
+
 
   </script>
 
