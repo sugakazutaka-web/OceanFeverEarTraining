@@ -806,6 +806,10 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
   .top-controls:has(.resident-mascot:not([hidden])) .chord-row {
     margin-top:-16px;
   }
+  /* Keep wrapped names at least 8px below the mode heading. */
+  .top-controls:has(.resident-mascot:not([hidden])) .chord-row > div:first-child {
+    padding-top:14px;
+  }
 }
 </style>
 </head>
