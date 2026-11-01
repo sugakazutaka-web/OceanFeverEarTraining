@@ -1273,7 +1273,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     let gameGeneration=0;
     let sessionMode='normal';
     let practiceVariant='c',practiceSavedSettings=null;
-    const practiceRoundTypes=new Set(),usedCPatterns=new Set(),practiceUsedTypes=new Set();
+    const practiceRoundTypes=new Set(),practiceUsedTypes=new Set();
     let practiceLastName=null,practiceLastShape=null,practiceLastType=null,practiceSameTypeCount=0;
     function practiceMode(){return sessionMode==='practice';}
     function leavePracticeMode(){
@@ -1326,7 +1326,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if(sessionMode==='endless') return ['easy','hard','all'][endlessProgress.level];
       return appSettings.melodyJazz==='on'?'jazz':difficulty().hard?'hard':'easy';
     }
-    function roundLimit(){return practiceMode()?(practiceVariant==='c'?15:21):sessionMode==='mxl'?originalState.queue.length:sessionMode==='mix'?15:sessionMode==='normal'?30:100;}
+    function roundLimit(){return practiceMode()?(practiceVariant==='c'?19:26):sessionMode==='mxl'?originalState.queue.length:sessionMode==='mix'?15:sessionMode==='normal'?30:100;}
     function resetScaleSpeedBoost(){
       if(scaleSpeedBoost && scaleSpeedBeforeBoost!==null) appSettings.speed=scaleSpeedBeforeBoost;
       scaleSpeedBoost=false;scaleSpeedBeforeBoost=null;
@@ -1387,7 +1387,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       { name: 'dim', intervals: [0, 3, 6], isTension: false },
       { name: 'aug', intervals: [0, 4, 8], isTension: false },
       { name: 'm7♭5', intervals: [0, 3, 6, 10], isTension: false },
-      { name: 'sus4', intervals: [0, 5, 7], isTension: false }
+      { name: 'sus4', intervals: [0, 5, 7], isTension: false },
+      { name: 'm(maj7)', intervals: [0, 3, 7, 11], isTension: false },
+      { name: 'm6', intervals: [0, 3, 7, 9], isTension: false },
+      { name: '7sus4', intervals: [0, 5, 7, 10], isTension: false },
+      { name: 'dim7', intervals: [0, 3, 6, 9], isTension: false },
+      { name: 'sus2', intervals: [0, 2, 7], isTension: false }
     ];
 
     const tensionChordDefinitions = [
@@ -2445,6 +2450,7 @@ function makePracticeGuitarChordQuestion(count, isRootFirst, plan) {
     }
 function makePracticeChordQuestion(count, isRootFirst, plan=practiceChordPlan()) {
       if(practiceVariant==='all')return makeAllChordTourQuestion(roundStats.total);
+      if(practiceVariant==='c')return makeIntervalPracticeQuestion(roundStats.total);
       if(practiceVariant==='c')isRootFirst=true;
       if (instrumentMode === 'guitar') return makePracticeGuitarChordQuestion(count, isRootFirst,plan);
       let attempts = 0;
@@ -2565,8 +2571,7 @@ function practiceChordPlan(){
 }
 function availableCDeltas(def){
       const deltas=def.intervals.slice(1).flatMap(n=>[n,n-12]);
-      if(deltas.every(n=>usedCPatterns.has(def.name+':'+n)))deltas.forEach(n=>usedCPatterns.delete(def.name+':'+n));
-      return deltas.filter(n=>!usedCPatterns.has(def.name+':'+n));
+      return deltas;
     }
 function acceptsTrialPattern(seq,def,plan){
       return !plan.triad||availableCDeltas(def).includes(seq[1].midi-seq[0].midi);
@@ -2579,12 +2584,24 @@ function repeatsTrialShape(sequence,def,plan){
 function recordPracticeChord(def,sequence,plan){
       practiceUsedTypes.add(def.name);practiceRoundTypes.add(def.name);
       practiceSameTypeCount=practiceLastType===def.name?practiceSameTypeCount+1:1;practiceLastType=def.name;
-      if(plan.triad)usedCPatterns.add(def.name+':'+(sequence[1].midi-sequence[0].midi));
+
 
     }
 
 
-    const allChordTourOrder=['','m','maj7','m7','7','m7♭5','dim','aug','sus4','add9','6/9','maj9','m(add9)','m9','m11','9','7(♭9)','7(♯9)','7(♯11)','13','7(♭13)'];
+    const allChordTourOrder=['','m','dim','aug','sus4','sus2','maj7','m7','m(maj7)','m6','7','7sus4','m7♭5','dim7','add9','6/9','maj9','m(add9)','m9','m11','9','7(♭9)','7(♯9)','7(♯11)','13','7(♭13)'];
+
+    const intervalPracticeOrder=[[7,''],[12,'m'],[5,'sus4'],[4,''],[3,'m7'],[11,'maj7'],[10,'7'],[2,'sus2'],[1,'m7♭5'],[9,'6/9'],[8,'aug'],[6,'dim'],[14,'add9'],[13,'7(♭9)'],[15,'7(♯9)'],[17,'m11'],[18,'7(♯11)'],[21,'13'],[20,'7(♭13)']];
+    function makeIntervalPracticeQuestion(index){
+      const [interval,name]=intervalPracticeOrder[index];
+      const question=makeAllChordTourQuestion(allChordTourOrder.indexOf(name));
+      const root=question.sequence[0];
+      const candidates=positions.filter(p=>p.midi===root.midi+interval);
+      candidates.sort((a,b)=>Math.abs(a.fret-root.fret)-Math.abs(b.fret-root.fret)||a.string.number-b.string.number);
+      if(!candidates.length)throw new Error('Interval practice tone unavailable');
+      question.sequence=[root,candidates[0]];
+      return question;
+    }
     function allChordTourDefinition(index){
       const name=allChordTourOrder[index];
       const def=[...basicChordDefinitions,...tensionChordDefinitions].find(d=>d.name===name);
@@ -3300,7 +3317,7 @@ function recordPracticeChord(def,sequence,plan){
   }
   function syncArcadeUI() {
     const sessionName = sessionMode === 'practice'
-      ? (practiceVariant === 'c' ? 'C-root mode' : 'All-chord experience')
+      ? (practiceVariant === 'c' ? 'Interval practice (in C)' : 'Chord practice (in C)')
       : ({normal:'Normal',endless:'Marathon',mix:'Mix',mxl:'mxl'}[sessionMode] || 'Normal');
     document.querySelector('.top-controls').dataset.sessionName = sessionName;
     updatePowerUI();
@@ -4180,11 +4197,11 @@ function recordPracticeChord(def,sequence,plan){
   function updatePracticeText(){
     const en=appSettings.lang==='on';
     practiceHint.textContent=en?'Finding Normal mode difficult? Try this ↓':'通常モードが難しい方はこちら↓';
-    practiceEntry.textContent=en?'🔰 Practice modes':'🔰 お試しモード';
+    practiceEntry.textContent=en?'🔰 Basic practice mode':'🔰 基礎練習モード';
     if(en)practiceSpeech.textContent='If Normal mode feels difficult, start practicing here♪';
     else appendCheerPhrases(practiceSpeech,['通常モードが難しいときは、','まずはこのモードで','練習してね♪']);
-    practiceCButton.textContent=en?'C-root mode\n(15 questions)':'Cコード限定モード\n（全15問）';
-    practiceAllButton.textContent=en?'All-chord experience\n(21 questions)':'全コード体験モード\n（全21問）';
+    practiceCButton.textContent=en?'Interval practice (in C)\n(19 questions)':'音程の練習（in C）\n（全19問）';
+    practiceAllButton.textContent=en?'Chord practice (in C)\n(26 questions)':'コードの練習（in C）\n（全26問）';
     practiceBack.textContent=en?'Back':'戻る';
   }
   practiceEntry.addEventListener('click',()=>{updatePracticeText();welcomeDialog.close();showPopupFromTop(practiceDialog,practiceSpeech);});
@@ -4201,10 +4218,10 @@ function recordPracticeChord(def,sequence,plan){
     clearTimeout(practiceStageTimer);clearArcade();
     if(advanced!==true)playWarpJingle();
     practiceStageDialog.classList.toggle('tour-notice',advanced==='all');
-    practiceStageSpeech.textContent=appSettings.lang==='on'?'First, 5 triad questions,\nthen 10 four-note chord questions♪':'最初に3和音から5問、\n次に4和音から10問出題するよ♪';
+    practiceStageSpeech.textContent=appSettings.lang==='on'?'I’ll quiz you on 19 intervals from C♪':'C音からの19個の音程を出題するよ♪';
     if(advanced==='all')appendCheerPhrases(practiceStageSpeech,appSettings.lang==='on'
-      ? ['Let’s explore','the 21 chord types','featured in this game♪']
-      : ['このゲームで出題される','21種類のコード・タイプを','体験しよう♪']);
+      ? ['Let’s explore','the 26 chord types','featured in this game♪']
+      : ['このゲームで出題される','26種類のコード・タイプを','体験しよう♪']);
     practiceStageDialog.showModal();
     practiceStageTimer=setTimeout(()=>{practiceStageDialog.close();},3000);
   }
