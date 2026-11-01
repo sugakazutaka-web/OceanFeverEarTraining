@@ -27,7 +27,7 @@ button:focus-visible{outline:3px solid #8ce7ff;outline-offset:4px}
 <p class="intro" id="intro">コーラル・バンドのライブを楽しんでね！</p>
 <div class="player" id="player"></div>
 <div class="actions"><button id="return" type="button">ゲームに戻る</button></div>
-<p class="note" id="note">動画の再生ボタンを押してください。プレーヤーの設定アイコンで画質を「1080p」にするとより綺麗な映像でライブを楽しめます。矢印のアイコンで全画面表示もできます。</p>
+<p class="note" id="note">動画の再生ボタンを押してください。プレーヤーの設定アイコンで画質を「1080p」にすると、より綺麗な映像でライブを楽しめます。全画面表示にしてご覧ください。</p>
 </main>
 <script>
 'use strict';
@@ -37,7 +37,7 @@ const embedded=window.parent!==window&&params.get('embedded')==='1';
 document.documentElement.lang=en?'en':'ja';
 document.querySelector('#intro').textContent=en?'Enjoy the Coral Band’s live show!':'コーラル・バンドのライブを楽しんでね！';
 document.querySelector('#return').textContent=en?'Back to the game':'ゲームに戻る';
-document.querySelector('#note').textContent=en?'Tap the video’s play button to start. For a clearer picture, use the player’s settings icon to set the quality to “1080p”. You can also use the arrow icon to enter fullscreen.':'動画の再生ボタンを押してください。プレーヤーの設定アイコンで画質を「1080p」にするとより綺麗な映像でライブを楽しめます。矢印のアイコンで全画面表示もできます。';
+document.querySelector('#note').textContent=en?'Tap the video’s play button to start. For a clearer picture, use the player’s settings icon to set the quality to “1080p”. Please watch in fullscreen.':'動画の再生ボタンを押してください。プレーヤーの設定アイコンで画質を「1080p」にすると、より綺麗な映像でライブを楽しめます。全画面表示にしてご覧ください。';
 const player=document.createElement('iframe');
 player.title='CORAL LIVE : MAGICAL UNDERSEA PARTY';
 player.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
