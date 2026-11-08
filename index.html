@@ -818,6 +818,11 @@ body.mix-advanced #deck-counter{background:linear-gradient(100deg,#c5fff0,#72e6c
     padding-top:14px;
   }
 }
+
+/* Suppress the board portrait for the entire overlapping popup lifetime. */
+body:has(#arcade-fx .arcade-banner.hot) .resident-mascot.fever-sign-portrait,
+body:has(dialog.challenge-dialog[open]) .resident-mascot.fever-sign-portrait,
+body:has(#arcade-fx .arcade-banner.cheer25) .resident-mascot.fever-sign-portrait {visibility:hidden;}
 </style>
 </head>
 <body>
@@ -3587,10 +3592,11 @@ function recordPracticeChord(def,sequence,plan){
     schedule();timer=setInterval(schedule,100);
   }
 
-  function playOniPartyMusic(ending = false) {
+  const normalClearNotes=[[84,0.0,0.535714,1],[79,0.535714,0.535714,1],[60,0.0,0.535714,2],[67,0.535714,0.535714,2],[76,1.071429,0.535714,1],[79,1.607143,0.535714,1],[72,1.071429,0.535714,2],[72,1.607143,0.535714,2],[81,2.142857,0.535714,1],[77,2.678571,0.535714,1],[77,2.142857,0.535714,2],[72,2.678571,0.535714,2],[79,3.214286,0.535714,1],[84,3.75,0.535714,1],[76,3.214286,0.535714,2],[72,3.75,0.535714,2],[77,4.285714,0.535714,1],[84,4.821429,0.535714,1],[69,4.285714,0.535714,2],[65,4.821429,0.535714,2],[76,5.357143,0.535714,1],[84,5.892857,0.535714,1],[72,5.357143,0.535714,2],[69,5.892857,0.535714,2],[74,6.428571,0.631579,1],[83,7.06015,0.631579,1],[65,6.428571,0.631579,2],[67,7.06015,0.631579,2],[84,7.691729,1.5,1],[72,7.691729,0.75,2],[60,8.441729,0.75,2]];
+  function playOniPartyMusic(ending = false, normalClear = false) {
     stopArcadeAudio();
     if(appSettings.sound!=='exists' || document.hidden) return;
-    const ctx=ensureAudio(), now=ctx.currentTime+.025, beat=60/(ending?120:144), duration=ending?12:10.1;
+    const ctx=ensureAudio(), now=ctx.currentTime+.025, beat=60/(ending?120:144), duration=normalClear?9.341729:ending?12:10.1;
     const master=ctx.createGain(), limiter=ctx.createDynamicsCompressor();
     master.gain.setValueAtTime(.23,now); master.gain.setValueAtTime(.23,now+duration-.5);master.gain.linearRampToValueAtTime(0,now+duration);
     limiter.threshold.value=-17;limiter.knee.value=12;limiter.ratio.value=8;
@@ -3614,7 +3620,10 @@ function recordPracticeChord(def,sequence,plan){
     }
     const noise=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.12),ctx.sampleRate),data=noise.getChannelData(0);
     for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
-    if(ending) {
+    if(normalClear) {
+      // Supplied ending30.mxl, including its tempo changes; retain the ending synth voices.
+      normalClearNotes.forEach(([midi,at,length,staff])=>synth(midi,at,length,staff===1?.22:.13,staff===1?'triangle':'sine'));
+    } else if(ending) {
       // A resolving major-key ending: four warm chords, bells, then a long tonic.
       const progression=[[60,64,67,72],[65,69,72,76],[67,71,74,77],[60,64,67,76]];
       progression.forEach((chord,bar)=>{
@@ -3903,8 +3912,8 @@ function recordPracticeChord(def,sequence,plan){
     }
     showPopupFromTop(endingDialog,endingTitle);
     if(endless && !graduated) scheduleEndingHint(en);
-    // Both normal endings use the existing fanfare until the MP3 is supplied.
-    try {if(endless)playEndlessEndingMusic();else playOniPartyMusic(true);}catch(error){console.warn('Ending music unavailable',error);}
+    // Use the supplied score only for a perfect Normal-mode clear.
+    try {if(endless)playEndlessEndingMusic();else playOniPartyMusic(true,sessionMode==='normal' && perfect);}catch(error){console.warn('Ending music unavailable',error);}
   }
 
   function returnToGameStart() {
