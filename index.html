@@ -865,24 +865,24 @@ body:has(#arcade-fx .arcade-banner.cheer25) .resident-mascot.fever-sign-portrait
               </div>
             </div>
           <div class="setting-item" id="scale-expert-group" style="display:none">
-            <label id="label-scale-expert">エキスパート・モード</label>
+            <label id="label-scale-expert">難易度レベル</label>
             <div class="setting-options" role="group" aria-labelledby="label-scale-expert">
-              <button type="button" class="setting-opt-btn active" data-scale-expert="off" aria-pressed="true">OFF</button>
-              <button type="button" class="setting-opt-btn" data-scale-expert="on" aria-pressed="false">ON</button>
+              <button type="button" class="setting-opt-btn active" data-scale-expert="off" aria-pressed="true">ふつう</button>
+              <button type="button" class="setting-opt-btn" data-scale-expert="on" aria-pressed="false">高い</button>
             </div>
           </div>
           <div class="setting-item" id="melody-jazz-group" style="display:none">
-            <label id="label-melody-jazz">ジャズ・モード</label>
+            <label id="label-melody-jazz">難易度レベル</label>
             <div class="setting-options" role="group" aria-labelledby="label-melody-jazz">
-              <button type="button" class="setting-opt-btn active" data-melody-jazz="off" aria-pressed="true">OFF</button>
-              <button type="button" class="setting-opt-btn" data-melody-jazz="on" aria-pressed="false">ON</button>
+              <button type="button" class="setting-opt-btn active" data-melody-jazz="off" aria-pressed="true">ふつう</button>
+              <button type="button" class="setting-opt-btn" data-melody-jazz="on" aria-pressed="false">高い</button>
             </div>
           </div>
           <div class="setting-item" id="first-note-group">
-            <label id="label-first-note">コード問題の最初の音</label>
+            <label id="label-first-note">難易度レベル</label>
             <fieldset id="first-note-mode" class="setting-options" aria-labelledby="label-first-note">
-              <button type="button" class="setting-opt-btn active" id="first-note-root-btn" data-first-note="root" aria-pressed="true">ルート音</button>
-              <button type="button" class="setting-opt-btn" id="first-note-random-btn" data-first-note="random" aria-pressed="false">ルート音以外</button>
+              <button type="button" class="setting-opt-btn active" id="first-note-root-btn" data-first-note="root" aria-pressed="true">ふつう</button>
+              <button type="button" class="setting-opt-btn" id="first-note-random-btn" data-first-note="random" aria-pressed="false">高い</button>
             </fieldset>
           </div>
           </div>
@@ -1021,9 +1021,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         opt2: "2音",
         opt3: "3音",
         opt4: "4音",
-        firstNote: "コード問題の最初の音",
-        optRoot: "ルート音",
-        optRandom: "ルート音以外",
+        firstNote: "難易度レベル",
+        optRoot: "ふつう",
+        optRandom: "高い",
         startBtn: "▶ 問題を出す",
         undoBtn: "↶ 1音戻る",
         replayBtn: "🔊 もう一度聴く",
@@ -1059,9 +1059,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         opt2: "2 Notes",
         opt3: "3 Notes",
         opt4: "4 Notes",
-        firstNote: "First Note of Chord Questions",
-        optRoot: "Root Note",
-        optRandom: "Non-root Note",
+        firstNote: "Difficulty Level",
+        optRoot: "Normal",
+        optRandom: "High",
         startBtn: "▶ Play Question",
         undoBtn: "↶ Undo Note",
         replayBtn: "🔊 Listen Again",
@@ -1091,6 +1091,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       sound: 'exists',
       lang: 'on'
     };
+
+    const settingsStorageKey='ocean-fever.settings.v1';
+    const settingValues={firstNote:['root','random'],melodyJazz:['off','on'],scaleExpert:['off','on'],speed:['slow','fast'],sound:['exists','none'],lang:['off','on']};
+    try {
+      const saved=JSON.parse(localStorage.getItem(settingsStorageKey));
+      if(saved && typeof saved==='object') for(const [key,values] of Object.entries(settingValues)){
+        if(values.includes(saved[key]))appSettings[key]=saved[key];
+      }
+    } catch(_) {}
+    function saveSettings(){
+      try {localStorage.setItem(settingsStorageKey,JSON.stringify(appSettings));}catch(_){}
+    }
+    function highDifficulty(mode){
+      return mode==='scale'?appSettings.scaleExpert==='on':mode==='melody'?appSettings.melodyJazz==='on':appSettings.firstNote==='random';
+    }
+    function applyChallengeDifficulty(mode){
+      if(mode==='melody')appSettings.melodyJazz='on';
+      else if(mode==='scale'){
+        if(appSettings.speed==='slow')appSettings.speed='fast';
+        else appSettings.scaleExpert='on';
+      }else appSettings.firstNote='random';
+      updateSettingsUI();
+    }
 
     function t(key, ...args) {
       const activeLang = appSettings.lang === 'on' ? 'en' : 'ja';
@@ -1177,23 +1200,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     document.querySelectorAll('[data-scale-expert]').forEach(button => {
       button.addEventListener('click', () => {
-        resetScaleSpeedBoost();
         appSettings.scaleExpert = button.dataset.scaleExpert;
         updateSettingsUI();
       });
     });
 
     function updateSettingsUI() {
+      saveSettings();
       const english = appSettings.lang === 'on';
-      document.querySelector('#label-scale-expert').textContent = english ? 'Expert Mode' : 'エキスパート・モード';
+      document.querySelector('#label-scale-expert').textContent = english ? 'Difficulty Level' : '難易度レベル';
       document.querySelectorAll('[data-scale-expert]').forEach(button => {
+        button.textContent=button.dataset.scaleExpert==='on'?(english?'High':'高い'):(english?'Normal':'ふつう');
         const selected = button.dataset.scaleExpert === appSettings.scaleExpert;
         button.classList.toggle('active', selected);
         button.setAttribute('aria-pressed', String(selected));
       });
-      document.querySelector('#label-melody-jazz').textContent = english ? 'Jazz Mode' : 'ジャズ・モード';
+      document.querySelector('#label-melody-jazz').textContent = english ? 'Difficulty Level' : '難易度レベル';
       document.querySelectorAll('[data-melody-jazz]').forEach(button => {
-        button.textContent = button.dataset.melodyJazz === 'on' ? 'ON' : 'OFF';
+        button.textContent=button.dataset.melodyJazz==='on'?(english?'High':'高い'):(english?'Normal':'ふつう');
         const selected = button.dataset.melodyJazz === appSettings.melodyJazz;
         button.classList.toggle('active', selected);
         button.setAttribute('aria-pressed', String(selected));
@@ -1298,7 +1322,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const originalState={all:[],queue:[],missed:[],available:['guitar','bass','original'],order:'score',half:false,chords:false};
     let mixCorrect={chord:0,scale:0,melody:0};
     let roundStats={total:0,correct:0,streak:0};
-    let scaleSpeedBoost=false,scaleSpeedBeforeBoost=null;
     let endlessProgress={level:0,levelStreak:0,recentAnswers:[]};
     let endlessRootBag=[];
     function resetEndlessProgress(){
@@ -1339,14 +1362,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       return appSettings.melodyJazz==='on'?'jazz':difficulty().hard?'hard':'easy';
     }
     function roundLimit(){return practiceMode()?(practiceVariant==='c'?19:26):sessionMode==='mxl'?originalState.queue.length:sessionMode==='mix'?15:sessionMode==='normal'?30:100;}
-    function resetScaleSpeedBoost(){
-      if(scaleSpeedBoost && scaleSpeedBeforeBoost!==null) appSettings.speed=scaleSpeedBeforeBoost;
-      scaleSpeedBoost=false;scaleSpeedBeforeBoost=null;
-    }
-    function enableScaleSpeedBoost(){
-      if(!scaleSpeedBoost) scaleSpeedBeforeBoost=appSettings.speed;
-      scaleSpeedBoost=true;
-    }
     function playbackSpeedFactor(){
       if(sessionMode==='mxl')return 1;
       if(sessionMode==='mix')return mixLevel===2?(questionTypeSelect.value==='scale'?.25:.5):(appSettings.speed==='fast'?.5:1);
@@ -1355,8 +1370,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if(endlessProgress.level===2) return .25;
         if(endlessProgress.level===1) return .5;
       }
-      const extraSpeed=sessionMode==='endless'?false:scaleSpeedBoost;
-      return (appSettings.speed==='fast'?.5:1)/(extraSpeed && questionTypeSelect.value==='scale'?2:1);
+      return appSettings.speed==='fast'?.5:1;
     }
     function recordRoundAnswer(correct){
       if(roundStats.total>=roundLimit()) return 'finished';
@@ -1365,7 +1379,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       roundStats.total++;
       roundStats.correct+=Number(correct);
       roundStats.streak=correct?roundStats.streak+1:0;
-      if(!correct) resetScaleSpeedBoost();
       if(sessionMode==='endless') updateEndlessProgress(correct);
       if(roundStats.total===roundLimit()) return 'finish';
       if(specialMode()||practiceMode())return 'normal';
@@ -3592,11 +3605,11 @@ function recordPracticeChord(def,sequence,plan){
     schedule();timer=setInterval(schedule,100);
   }
 
-  const normalClearNotes=[[84,0.0,0.535714,1],[79,0.535714,0.535714,1],[60,0.0,0.535714,2],[67,0.535714,0.535714,2],[76,1.071429,0.535714,1],[79,1.607143,0.535714,1],[72,1.071429,0.535714,2],[72,1.607143,0.535714,2],[81,2.142857,0.535714,1],[77,2.678571,0.535714,1],[77,2.142857,0.535714,2],[72,2.678571,0.535714,2],[79,3.214286,0.535714,1],[84,3.75,0.535714,1],[76,3.214286,0.535714,2],[72,3.75,0.535714,2],[77,4.285714,0.535714,1],[84,4.821429,0.535714,1],[69,4.285714,0.535714,2],[65,4.821429,0.535714,2],[76,5.357143,0.535714,1],[84,5.892857,0.535714,1],[72,5.357143,0.535714,2],[69,5.892857,0.535714,2],[74,6.428571,0.631579,1],[83,7.06015,0.631579,1],[65,6.428571,0.631579,2],[67,7.06015,0.631579,2],[84,7.691729,1.5,1],[72,7.691729,0.75,2],[60,8.441729,0.75,2]];
+  const normalClearNotes=[[88,0.0,0.49,0.22,"triangle",null],[88,0.5,0.49,0.22,"triangle",null],[89,1.0,0.49,0.22,"triangle",null],[91,1.5,0.49,0.22,"triangle",null],[60,0.0,1.9,0.13,"triangle",null],[64,0.0,1.9,0.13,"triangle",null],[67,0.0,1.9,0.13,"triangle",null],[48,0.0,1.6,0.25,"sine",null],[72,0.0,0.34,0.075,"sine",null],[76,0.25,0.34,0.075,"sine",null],[79,0.5,0.34,0.075,"sine",null],[72,0.75,0.34,0.075,"sine",null],[76,1.0,0.34,0.075,"sine",null],[79,1.25,0.34,0.075,"sine",null],[72,1.5,0.34,0.075,"sine",null],[76,1.75,0.25,0.075,"sine",null],[91,2.0,0.49,0.22,"triangle",null],[89,2.5,0.49,0.22,"triangle",null],[88,3.0,0.49,0.22,"triangle",null],[86,3.5,0.49,0.22,"triangle",null],[59,2.0,1.9,0.13,"triangle",null],[62,2.0,1.9,0.13,"triangle",null],[67,2.0,1.9,0.13,"triangle",null],[43,2.0,1.6,0.25,"sine",null],[71,2.0,0.34,0.075,"sine",null],[74,2.25,0.34,0.075,"sine",null],[79,2.5,0.34,0.075,"sine",null],[71,2.75,0.34,0.075,"sine",null],[74,3.0,0.34,0.075,"sine",null],[79,3.25,0.34,0.075,"sine",null],[71,3.5,0.34,0.075,"sine",null],[74,3.75,0.25,0.075,"sine",null],[84,4.0,0.49,0.22,"triangle",null],[84,4.5,0.49,0.22,"triangle",null],[86,5.0,0.49,0.22,"triangle",null],[88,5.5,0.49,0.22,"triangle",null],[60,4.0,1.9,0.13,"triangle",null],[64,4.0,1.9,0.13,"triangle",null],[67,4.0,1.9,0.13,"triangle",null],[48,4.0,1.6,0.25,"sine",null],[72,4.0,0.34,0.075,"sine",null],[76,4.25,0.34,0.075,"sine",null],[79,4.5,0.34,0.075,"sine",null],[72,4.75,0.34,0.075,"sine",null],[76,5.0,0.34,0.075,"sine",null],[79,5.25,0.34,0.075,"sine",null],[72,5.5,0.34,0.075,"sine",null],[76,5.75,0.25,0.075,"sine",null],[88,6.0,0.735,0.22,"triangle",null],[86,6.75,0.245,0.22,"triangle",null],[86,7.0,0.98,0.22,"triangle",null],[60,6.0,1.9,0.13,"triangle",0.995],[64,6.0,1.9,0.13,"triangle",0.995],[67,6.0,1.9,0.13,"triangle",0.995],[43,6.0,1.6,0.25,"sine",0.995],[72,6.0,0.34,0.075,"sine",null],[76,6.25,0.34,0.075,"sine",null],[79,6.5,0.34,0.075,"sine",null],[72,6.75,0.25,0.075,"sine",null],[59,7.0,1.9,0.13,"triangle",0.995],[62,7.0,1.9,0.13,"triangle",0.995],[67,7.0,1.9,0.13,"triangle",0.995],[43,7.0,1.6,0.25,"sine",0.995],[71,7.0,0.34,0.075,"sine",null],[74,7.25,0.34,0.075,"sine",null],[79,7.5,0.34,0.075,"sine",null],[71,7.75,0.25,0.075,"sine",null],[88,8.0,0.49,0.22,"triangle",null],[88,8.5,0.49,0.22,"triangle",null],[89,9.0,0.49,0.22,"triangle",null],[91,9.5,0.49,0.22,"triangle",null],[60,8.0,1.9,0.13,"triangle",null],[64,8.0,1.9,0.13,"triangle",null],[67,8.0,1.9,0.13,"triangle",null],[48,8.0,1.6,0.25,"sine",null],[72,8.0,0.34,0.075,"sine",null],[76,8.25,0.34,0.075,"sine",null],[79,8.5,0.34,0.075,"sine",null],[72,8.75,0.34,0.075,"sine",null],[76,9.0,0.34,0.075,"sine",null],[79,9.25,0.34,0.075,"sine",null],[72,9.5,0.34,0.075,"sine",null],[76,9.75,0.25,0.075,"sine",null],[91,10.0,0.49,0.22,"triangle",null],[89,10.5,0.49,0.22,"triangle",null],[88,11.0,0.49,0.22,"triangle",null],[86,11.5,0.49,0.22,"triangle",null],[60,10.0,1.9,0.13,"triangle",null],[65,10.0,1.9,0.13,"triangle",null],[69,10.0,1.9,0.13,"triangle",null],[41,10.0,1.6,0.25,"sine",null],[72,10.0,0.34,0.075,"sine",null],[77,10.25,0.34,0.075,"sine",null],[81,10.5,0.34,0.075,"sine",null],[72,10.75,0.34,0.075,"sine",null],[77,11.0,0.34,0.075,"sine",null],[81,11.25,0.34,0.075,"sine",null],[72,11.5,0.34,0.075,"sine",null],[77,11.75,0.25,0.075,"sine",null],[84,12.0,0.49,0.22,"triangle",null],[84,12.5,0.49,0.22,"triangle",null],[86,13.0,0.49,0.22,"triangle",null],[88,13.5,0.49,0.22,"triangle",null],[60,12.0,1.9,0.13,"triangle",null],[64,12.0,1.9,0.13,"triangle",null],[67,12.0,1.9,0.13,"triangle",null],[43,12.0,1.6,0.25,"sine",null],[72,12.0,0.34,0.075,"sine",null],[76,12.25,0.34,0.075,"sine",null],[79,12.5,0.34,0.075,"sine",null],[72,12.75,0.34,0.075,"sine",null],[76,13.0,0.34,0.075,"sine",null],[79,13.25,0.34,0.075,"sine",null],[72,13.5,0.34,0.075,"sine",null],[76,13.75,0.25,0.075,"sine",null],[86,14.0,0.735,0.22,"triangle",null],[84,14.75,0.245,0.22,"triangle",null],[84,15.0,0.98,0.22,"triangle",null],[59,14.0,1.9,0.13,"triangle",0.995],[62,14.0,1.9,0.13,"triangle",0.995],[67,14.0,1.9,0.13,"triangle",0.995],[43,14.0,1.6,0.25,"sine",0.995],[71,14.0,0.34,0.075,"sine",null],[74,14.25,0.34,0.075,"sine",null],[79,14.5,0.34,0.075,"sine",null],[71,14.75,0.25,0.075,"sine",null],[60,15.0,1.9,0.13,"triangle",0.995],[64,15.0,1.9,0.13,"triangle",0.995],[67,15.0,1.9,0.13,"triangle",0.995],[48,15.0,1.6,0.25,"sine",0.995],[72,15.0,0.34,0.075,"sine",null],[76,15.25,0.34,0.075,"sine",null],[79,15.5,0.34,0.075,"sine",null],[72,15.75,0.25,0.075,"sine",null],[48,16,3.65,0.1,"triangle",null],[60,16,3.65,0.1,"triangle",null],[64,16,3.65,0.1,"triangle",null],[67,16,3.65,0.1,"triangle",null],[72,16,3.65,0.1,"triangle",null],[84,16,3.65,0.1,"triangle",null],[84,16.15,1.1,0.12,"sine",null],[88,16.4,1.1,0.12,"sine",null],[91,16.65,1.1,0.12,"sine",null],[96,16.9,1.1,0.12,"sine",null]];
   function playOniPartyMusic(ending = false, normalClear = false) {
     stopArcadeAudio();
     if(appSettings.sound!=='exists' || document.hidden) return;
-    const ctx=ensureAudio(), now=ctx.currentTime+.025, beat=60/(ending?120:144), duration=normalClear?9.341729:ending?12:10.1;
+    const ctx=ensureAudio(), now=ctx.currentTime+.025, beat=60/(ending?120:144), duration=normalClear?20:ending?12:10.1;
     const master=ctx.createGain(), limiter=ctx.createDynamicsCompressor();
     master.gain.setValueAtTime(.23,now); master.gain.setValueAtTime(.23,now+duration-.5);master.gain.linearRampToValueAtTime(0,now+duration);
     limiter.threshold.value=-17;limiter.knee.value=12;limiter.ratio.value=8;
@@ -3610,19 +3623,26 @@ function recordPracticeChord(def,sequence,plan){
       arcadeStops.delete(stop);activeVoices.delete(stop);queueAudioIdle();
     }
     arcadeStops.add(stop);activeVoices.add(stop);
-    function synth(midi,start,duration,level=.23,type='triangle',endMidi=midi){
+    function synth(midi,start,duration,level=.23,type='triangle',endMidi=midi,cutoff=null){
       const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=type;
       osc.frequency.setValueAtTime(440*2**((midi-69)/12),now+start);
       osc.frequency.exponentialRampToValueAtTime(440*2**((endMidi-69)/12),now+start+duration);
       gain.gain.setValueAtTime(.0001,now+start);gain.gain.exponentialRampToValueAtTime(level,now+start+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+start+duration);
-      osc.connect(gain).connect(master);osc.onended=()=>{osc.disconnect();gain.disconnect();};
+      const fade=ctx.createGain();
+      if(cutoff!==null){
+        fade.gain.setValueAtTime(1,now+start);
+        fade.gain.setValueAtTime(1,now+start+Math.max(0,cutoff-.1));
+        fade.gain.linearRampToValueAtTime(0,now+start+cutoff);
+      }
+      osc.connect(gain).connect(fade).connect(master);
+      osc.onended=()=>{osc.disconnect();gain.disconnect();fade.disconnect();};
       osc.start(now+start);osc.stop(now+start+duration+.02);sources.push(osc);
     }
     const noise=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.12),ctx.sampleRate),data=noise.getChannelData(0);
     for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
     if(normalClear) {
-      // Supplied ending30.mxl, including its tempo changes; retain the ending synth voices.
-      normalClearNotes.forEach(([midi,at,length,staff])=>synth(midi,at,length,staff===1?.22:.13,staff===1?'triangle':'sine'));
+      // Approved Ode to Joy arrangement, with pre-change fades in bars 4 and 8.
+      normalClearNotes.forEach(([midi,at,length,level,type,cutoff])=>synth(midi,at,length,level,type,midi,cutoff));
     } else if(ending) {
       // A resolving major-key ending: four warm chords, bells, then a long tonic.
       const progression=[[60,64,67,72],[65,69,72,76],[67,71,74,77],[60,64,67,76]];
@@ -3981,6 +4001,10 @@ function recordPracticeChord(def,sequence,plan){
   function beginRootChallenge() {
     const generation=gameGeneration;
     clearArcade();
+    if(highDifficulty(game.mode)){
+      if(arcadeEnabled && !document.hidden)showNormal25Cheer(20);
+      return;
+    }
     challengeActive=true;challengeAnswered=false;
     challengeMode=game.mode;
     challengeDialog.classList.remove('challenge-reply');
@@ -4005,20 +4029,12 @@ function recordPracticeChord(def,sequence,plan){
     challengeDialog.classList.add('challenge-reply');
     challengeYes.disabled=challengeNo.disabled=true;
     challengeChoices.hidden=true;
-    challengeSpeech.textContent=appSettings.lang==='on' ? (harder?'Then try this!':"You're on a roll! Keep it up!") : (harder?'じゃあ、これはどうだ～！':'その調子でがんばって！');
+    challengeSpeech.textContent=appSettings.lang==='on' ? (harder?'Let’s try the High difficulty setting!':"You're on a roll! Keep it up!") : (harder?'じゃあ、難易度「高い」設定に挑戦だー！':'その調子でがんばって！');
     wrapPopupJapanese(challengeSpeech);
     setTimeout(()=>{
       if(generation!==gameGeneration || !challengeActive) return;
       if(harder && sessionMode==='normal') {
-        if(challengeMode==='melody') appSettings.melodyJazz='on';
-        else if(challengeMode==='scale') {
-          if(appSettings.speed==='fast') {
-            resetScaleSpeedBoost();
-            appSettings.scaleExpert='on';
-          } else enableScaleSpeedBoost();
-        }
-        else appSettings.firstNote='random';
-        updateSettingsUI();
+        applyChallengeDifficulty(challengeMode);
       }
       challengeActive=false;
       challengeSavedControls.forEach(([control,disabled])=>{control.disabled=disabled;});
@@ -4098,7 +4114,7 @@ function recordPracticeChord(def,sequence,plan){
     feverPortraitReady = false;
     practiceRoundTypes.clear();
     mixLastQuestionLevel=null;
-    mixCorrect={chord:0,scale:0,melody:0};resetScaleSpeedBoost();resetEndlessProgress();roundStats={total:0,correct:0,streak:0};roundEvent='normal';mixSectionSeen=-1;
+    mixCorrect={chord:0,scale:0,melody:0};resetEndlessProgress();roundStats={total:0,correct:0,streak:0};roundEvent='normal';mixSectionSeen=-1;
     Object.values(difficultyStates).forEach(state=>{state.hard=false;state.correct=0;state.wrong=0;});
     Object.keys(feverPeaks).forEach(mode=>{feverPeaks[mode]=0;oniCompleted[mode]=false;});
     updateSettingsUI();
@@ -4130,7 +4146,7 @@ function recordPracticeChord(def,sequence,plan){
   // Explicit phrase boundaries keep Japanese popup copy readable at every viewport width.
   function wrapPopupJapanese(element){
     if(appSettings.lang==='on') return;
-    const boundaries=['お見事！ ','音をキャッチ！ · ','惜しい！ ','もう一度、','5連続正解！ ','フィーバータイム、','問題が','10連続正解！ ','海が燃える、','15連続正解！ ','伝説の','フィーバー終了…。','ちょっと','じゃあ、','その調子で','他のモードにも','30問連続正解を','目指して','今日も海の底で、','私と一緒に','イヤートレーニング','全30問 · ','全100問 · ','10連続正解ごとに','コーラルが','30問','100問'];
+    const boundaries=['難易度「高い」設定に','あと10回連続、','あと5回連続、','お見事！ ','音をキャッチ！ · ','惜しい！ ','もう一度、','5連続正解！ ','フィーバータイム、','問題が','10連続正解！ ','海が燃える、','15連続正解！ ','伝説の','フィーバー終了…。','ちょっと','じゃあ、','その調子で','他のモードにも','30問連続正解を','目指して','今日も海の底で、','私と一緒に','イヤートレーニング','全30問 · ','全100問 · ','10連続正解ごとに','コーラルが','30問','100問'];
     let text=element.textContent;
     // Prefer the longest boundary at a given position (e.g. 30問連続正解を before 30問).
     const parts=[];let from=0;
@@ -4147,13 +4163,14 @@ function recordPracticeChord(def,sequence,plan){
       const span=document.createElement('span');span.className='popup-phrase';span.textContent=part;element.append(span);
     });
   }
-  function showNormal25Cheer(){
+  function showNormal25Cheer(combo=25){
     const en=appSettings.lang==='on';
     const banner=document.createElement('div');banner.className='arcade-banner cheer25 ending-dialog challenge-dialog';
-    const title=document.createElement('h2');title.textContent='25 COMBO!';
+    const title=document.createElement('h2');title.textContent=`${combo} COMBO!`;
     const image=document.createElement('img');image.className='ending-character';image.src=mascotImage;image.alt=en?'Coral cheering you on':'応援するコーラル';
     const speech=document.createElement('div');speech.className='oni-speech';speech.lang=en?'en':'ja';
-    speech.textContent=en?'Just 5 more in a row!\nYou can do it!':'あと5回連続、がんばって！';
+    speech.textContent=en?`Just ${30-combo} more in a row!\nYou can do it!`:`あと${30-combo}回連続、がんばって！`;
+    wrapPopupJapanese(speech);
     banner.append(title,image,speech);arcadeLayer.append(banner);arcadeTimer=setTimeout(clearArcade,2000);
   }
   function showCoralCheer(){
@@ -4951,7 +4968,7 @@ mxlStart.addEventListener('click',()=>{
   if(!pendingOriginal)return;
   const {questions,available}=pendingOriginal;
   sessionMode='mxl';originalState.all=questions;originalState.available=available;originalState.order=mxlOrder.value;
-  originalState.queue=originalState.order==='random'?shuffleMelodies(questions):[...questions];originalState.half=originalState.chords=false;appSettings.sound='exists';
+  originalState.queue=originalState.order==='random'?shuffleMelodies(questions):[...questions];originalState.half=originalState.chords=false;
   questionTypeSelect.value='melody';resetSpecialRound();updateOriginalInstrumentChoices();
   mxlDialog.close();welcomeDialog.close();playWarpJingle();syncArcadeUI();startButton.focus();
 });
