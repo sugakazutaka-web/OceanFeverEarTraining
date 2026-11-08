@@ -1092,6 +1092,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       lang: 'on'
     };
 
+    // Keep user selections separate from temporary mode-specific overrides.
+    const selectionStorageKey='ocean-fever.selections.v1';
+    const selectionOptions={instrument:['guitar','bass','original'],question:['chord','scale','melody'],noteCount:['2','3','4']};
+    const savedSelections={instrument:'guitar',question:'chord',noteCount:'3'};
+    try {
+      const saved=JSON.parse(localStorage.getItem(selectionStorageKey));
+      if(saved && typeof saved==='object') for(const [key,values] of Object.entries(selectionOptions)){
+        if(values.includes(saved[key]))savedSelections[key]=saved[key];
+      }
+    }catch(_){}
+    const selectionControls={instrument:instrumentSelect,question:questionTypeSelect,noteCount:noteCountSelect};
+    for(const [key,control] of Object.entries(selectionControls)){
+      control.value=savedSelections[key];
+      control.addEventListener('change',event=>{
+        // Internal MXL instrument fallback must not overwrite the user's preference.
+        if(!event.isTrusted || !selectionOptions[key].includes(control.value))return;
+        savedSelections[key]=control.value;
+        try{localStorage.setItem(selectionStorageKey,JSON.stringify(savedSelections));}catch(_){}
+      });
+    }
+
     const settingsStorageKey='ocean-fever.settings.v1';
     const settingValues={firstNote:['root','random'],melodyJazz:['off','on'],scaleExpert:['off','on'],speed:['slow','fast'],sound:['exists','none'],lang:['off','on']};
     try {
@@ -1395,7 +1416,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       original: { tuning: [67, 62, 57, 52], names: ['G', 'D', 'A', 'E'], melodyRoot: 55, chordRoot: 60 },
       guitar: { tuning: [64, 59, 55, 50, 45, 40], names: ['E', 'B', 'G', 'D', 'A', 'E'], melodyRoot: 43, chordRoot: 48 }
     };
-    let instrumentMode = 'guitar';
+    let instrumentMode = instrumentSelect.value;
     function instrument() { return instruments[instrumentMode]; }
     function makeStrings() {
       return instrument().tuning.map((midi, index) => ({ midi, name: instrument().names[index], label: instrument().names[index], number: index + 1 }));
@@ -1622,7 +1643,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     let game = { 
-      mode: 'chord',
+      mode: questionTypeSelect.value,
       phase: 'idle', 
       target: [], 
       answers: [], 
