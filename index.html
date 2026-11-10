@@ -21,7 +21,7 @@ button:active { filter:brightness(.85);}
 button:disabled,select:disabled { opacity:1; cursor:default; -webkit-text-fill-color:currentColor;}
 button:focus-visible,.cell:focus-visible { outline:3px solid #9ddcff; outline-offset:2px;}
 select { border-width:2px; width:100%; min-width:0;}
-#question-type:focus, #note-count:focus { outline:none; border-color:var(--accent-border); box-shadow:none;}
+#instrument-select:focus,#question-type:focus,#note-count:focus{outline:none;box-shadow:none;}
 .status-container { width:100%; display:flex; flex-direction:column; gap:6px;}
 .chord-row { display:flex; align-items:center; justify-content:space-between; gap:10px; border:2px solid #594735; padding:5px 12px; border-radius:14px; min-height:56px;}
 .status-label { font-size:10px; letter-spacing:.12em;}
@@ -852,7 +852,7 @@ body.endless-mode .coral-cheer .coral-portrait{overflow:visible;clip-path:inset(
 
 /* Shared normal-mode speech sizing and rising speech-bubble angle. */
 body.normal-mode .oni-speech{font-size:clamp(20px,3vw,24px)!important;}
-body.normal-mode .arcade-banner small{font-size:clamp(20px,3vw,24px);}
+body.normal-mode .arcade-banner small{font-size:14px;}
 body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);white-space:pre-line;}
 .oni-close{display:block;pointer-events:auto;margin:10px auto 0;min-height:30px;padding:4px 14px;font-size:12px;font-weight:400;color:#c6d5df;background:#253b52;border:1px solid #607386;box-shadow:none;}
 #start,#replay{font-size:15px;}
@@ -860,14 +860,29 @@ body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);whit
 @media(min-width:651px) and (orientation:landscape){
   #instrument-select,#question-type,#note-count{font-size:16px;}
 }
-/* Reserve the full portrait slot even before fever to prevent vertical jumps. */
+/* Keep Coral out of the flow: the card geometry no longer depends on visibility. */
+#start,#replay,#play-chord-arpeggio{font-weight:500;}
+#instrument-select,#question-type,#note-count,
+#instrument-select option,#question-type option,#note-count option{font-weight:400;}
+#instrument-select:focus,#instrument-select:focus-visible,
+#question-type:focus,#question-type:focus-visible,
+#note-count:focus,#note-count:focus-visible{outline:none!important;box-shadow:none!important;}
+.top-controls .chord-row,.top-controls .chord-actions{position:static;}
+.top-controls .chord-actions .resident-mascot.coral-portrait{
+  position:absolute;top:3px;right:14px;margin:0;transform:none;
+}
+@media(min-width:651px) and (orientation:landscape){
+  .top-controls{grid-template-rows:14px 90px 56px minmax(46px,1fr);}
+  .top-controls .chord-row{height:90px;}
+  .top-controls:before{max-width:calc(100% - 110px);}
+}
 @media(max-width:650px) and (orientation:portrait){
   .top-controls,.top-controls:has(.resident-mascot:not([hidden])){padding-top:20px;padding-bottom:20px;row-gap:16px;}
-  .top-controls .chord-row,.top-controls:has(.resident-mascot:not([hidden])) .chord-row{margin-top:0;min-height:104px;}
+  .top-controls:before,.top-controls:has(.resident-mascot:not([hidden])):before{max-width:calc(100% - 110px);}
+  .top-controls .chord-row,.top-controls:has(.resident-mascot:not([hidden])) .chord-row{margin-top:0;min-height:60px;}
   .top-controls .chord-row>div:first-child,.top-controls:has(.resident-mascot:not([hidden])) .chord-row>div:first-child{padding-top:0;}
   .chord-actions{width:max-content;min-width:104px;}
-  .chord-actions .resident-mascot.coral-portrait{width:80px;height:64px;aspect-ratio:auto;}
-  .chord-actions .resident-mascot[hidden]{display:block!important;visibility:hidden;}
+  .top-controls .chord-actions .resident-mascot.coral-portrait{right:20px;width:80px;height:64px;aspect-ratio:auto;}
 }
 </style>
 </head>
