@@ -19,6 +19,11 @@ button:focus-visible{outline:3px solid #8ce7ff;outline-offset:4px}
 @media(hover:hover) and (pointer:fine){button:hover{filter:brightness(1.08)}}
 .note{font-size:16px;line-height:1.8;margin:16px auto 0;max-width:760px;text-align:left}
 @media(orientation:landscape) and (max-height:500px){main{padding-top:8px}h1{font-size:20px}h1 span{display:inline;margin-left:8px}.intro{display:none}.player{width:min(100%,calc((100dvh - 94px)*16/9));margin:auto}.actions{margin-top:8px}.note{margin-top:8px}}
+
+/* Keep the video and return control within desktop landscape windows. */
+@media(min-width:651px) and (orientation:landscape){
+  .player{width:min(800px,100%,calc(max(140px,100dvh - 300px)*16/9));min-height:0;margin-inline:auto;}
+}
 </style>
 </head>
 <body>
