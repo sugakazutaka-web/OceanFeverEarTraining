@@ -157,7 +157,7 @@ button,select{border-radius:10px;transition:background .18s,border-color .18s,tr
   .top-controls { padding:14px; }
   .chord-row { gap:6px; }
   #target-title { font-size:25px; }
-  #play-chord-arpeggio { font-size:10px; padding:5px; }
+  #play-chord-arpeggio { padding:5px; }
 }
 
 
@@ -340,7 +340,7 @@ body.endless-middle-level #deck-counter,body.mix-middle #deck-counter { backgrou
 .instrument-heading { margin-bottom:8px;}
 .board-navigation { padding-top:4px;}
 .instrument-legend { margin-top:3px;}
-.arcade-banner.fever-start { border-color:#fff3a9; background:linear-gradient(135deg,#84511af0,#5c245bee,#18395cf5); box-shadow:0 0 45px #ffd95966,inset 0 0 20px #ffc83933; animation:prize-in 3.0s ease both;}
+.arcade-banner.fever-start { border-color:#fff3a9; background:linear-gradient(135deg,#84511af0,#5c245bee,#18395cf5); box-shadow:0 0 45px #ffd95966,inset 0 0 20px #ffc83933; animation:prize-in 3.4s ease both;}
 .arcade-banner.fever-start strong { font-size:clamp(27px,4.7vw,58px);}
 .fever-start-stars { margin-top:10px; color:#fff0a5; font-size:26px; text-shadow:0 0 15px #ffe378; letter-spacing:5px;}
 #arcade-fx { isolation:isolate;}
@@ -673,7 +673,7 @@ body.endless-top-level #deck-counter.hard-mode{background:linear-gradient(100deg
 .popup-phrase{display:inline-block;white-space:nowrap;word-break:normal;overflow-wrap:normal;}
 
 /* Keep the ONI headline and Coral prominent without an extra combo heading. */
-.arcade-banner.oni strong{font-size:clamp(24px,4vw,44px);font-weight:800;line-height:1.2;}
+.arcade-banner.oni strong{font-size:clamp(30px,4vw,44px);font-weight:800;line-height:1.2;}
 .oni-party .oni-character{width:min(360px,42vh);height:min(360px,42vh);}
 .arcade-banner.oni .oni-speech{white-space:pre-line;line-height:1.3;}
 
@@ -839,7 +839,7 @@ body.arcade-listening .fever-ribbon{opacity:1;}
 body.fever-oni .top-controls,body.endless-top-level .top-controls{background:linear-gradient(120deg,#88477b,#5d4899,#22798b,#88477b);background-size:100% 100%!important;background-position:0 0;}
 body.endless-mode .coral-cheer strong{letter-spacing:normal;margin-bottom:10px;}
 @media(min-width:651px) and (orientation:landscape){
-  #ending-dialog #ending-invitation,.ending-dialog:not(.challenge-dialog) #ending-invitation{font-size:clamp(17px,2.8vw,28px)!important;}
+  body.normal-mode .ending-dialog:not(.challenge-dialog) #ending-invitation{font-size:clamp(20px,2.8vw,24px)!important;}
 }
 @media(max-width:650px) and (orientation:portrait){
   .studio-header{grid-template-columns:minmax(0,1fr) auto auto;column-gap:6px;}
@@ -849,6 +849,26 @@ body.endless-mode .coral-cheer strong{letter-spacing:normal;margin-bottom:10px;}
 
 /* Reveal the orb to the left without moving or resizing Coral or the right crop edge. */
 body.endless-mode .coral-cheer .coral-portrait{overflow:visible;clip-path:inset(0 0 0 -15%);}
+
+/* Shared normal-mode speech sizing and rising speech-bubble angle. */
+body.normal-mode .oni-speech{font-size:clamp(20px,3vw,24px)!important;}
+body.normal-mode .arcade-banner small{font-size:clamp(20px,3vw,24px);}
+body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);white-space:pre-line;}
+.oni-close{display:block;pointer-events:auto;margin:10px auto 0;min-height:30px;padding:4px 14px;font-size:12px;font-weight:400;color:#c6d5df;background:#253b52;border:1px solid #607386;box-shadow:none;}
+#start,#replay{font-size:15px;}
+#play-chord-arpeggio{font-size:12px;}
+@media(min-width:651px) and (orientation:landscape){
+  #instrument-select,#question-type,#note-count{font-size:16px;}
+}
+/* Reserve the full portrait slot even before fever to prevent vertical jumps. */
+@media(max-width:650px) and (orientation:portrait){
+  .top-controls,.top-controls:has(.resident-mascot:not([hidden])){padding-top:20px;padding-bottom:20px;row-gap:16px;}
+  .top-controls .chord-row,.top-controls:has(.resident-mascot:not([hidden])) .chord-row{margin-top:0;min-height:104px;}
+  .top-controls .chord-row>div:first-child,.top-controls:has(.resident-mascot:not([hidden])) .chord-row>div:first-child{padding-top:0;}
+  .chord-actions{width:max-content;min-width:104px;}
+  .chord-actions .resident-mascot.coral-portrait{width:80px;height:64px;aspect-ratio:auto;}
+  .chord-actions .resident-mascot[hidden]{display:block!important;visibility:hidden;}
+}
 </style>
 </head>
 <body>
@@ -1053,7 +1073,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         startBtn: "▶ 問題を出す",
         undoBtn: "↶ 1音戻る",
         replayBtn: "🔊 もう一度聴く",
-        viewResultBtn: "👁️ 正解を確認する",
+        viewResultBtn: "👁️ 正解を確認",
         playChordBtn: "🎸 コードを鳴らす",
         initialMsg: "「問題を出す」を押してください",
         chordTitleLabel: "コード名",
@@ -3353,8 +3373,8 @@ function recordPracticeChord(def,sequence,plan){
 
   };
   const arcadeStops = new Set();
-  function stopArcadeAudio() { [...arcadeStops].forEach(stop => stop()); }
-  function clearArcade() {
+  function stopArcadeAudio(fadeSeconds=0) { [...arcadeStops].forEach(stop => stop(fadeSeconds)); }
+  function clearArcade(fadeSeconds=0) {
     // A dismissed FEVER START popup unlocks the portrait for this streak.
     if (arcadeLayer.querySelector('.fever-start') && sessionMode === 'normal' && feverStage() > 0) {
       feverPortraitReady = true;
@@ -3364,7 +3384,7 @@ function recordPracticeChord(def,sequence,plan){
     arcadeLayer.replaceChildren();
     syncResidentMascot();
     document.body.classList.remove('arcade-win','arcade-miss');
-    stopArcadeAudio();
+    stopArcadeAudio(typeof fadeSeconds==='number'?fadeSeconds:0);
   }
   function syncResidentMascot() {
     const normalFever = sessionMode === 'normal' && feverStage() > 0;
@@ -3382,6 +3402,7 @@ function recordPracticeChord(def,sequence,plan){
       : ({normal:'Normal',endless:'Marathon',mix:'Mix',mxl:'mxl'}[sessionMode] || 'Normal');
     document.querySelector('.top-controls').dataset.sessionName = sessionName;
     refreshExtraUI();
+    document.body.classList.toggle('normal-mode',sessionMode==='normal');
     document.body.classList.toggle('endless-mode',sessionMode==='endless');
     document.body.classList.toggle('endless-middle-level',sessionMode==='endless' && endlessProgress.level===1);
     document.body.classList.toggle('endless-top-level',sessionMode==='endless' && endlessProgress.level===2);
@@ -3462,7 +3483,7 @@ function recordPracticeChord(def,sequence,plan){
     }
     // The party timer replaces the result banner and stars together without cancelling the transition.
     if(kind==='streak20') return;
-    arcadeTimer = setTimeout(clearArcade, kind==='unlock' ? 3000 : kind==='oni' ? 10300 : kind==='hot' || kind==='end' ? 3600 : 2900);
+    arcadeTimer = setTimeout(clearArcade, kind==='unlock' || kind==='hot' ? 3400 : kind==='oni' ? 10300 : kind==='end' ? 3600 : 2900);
   }
   const baseShowResult = showResult;
   showResult = function(isNewAnswer = true) {
@@ -3592,7 +3613,18 @@ function recordPracticeChord(def,sequence,plan){
     document.body.classList.add('oni-party');
     const progress=document.createElement('div'); progress.className='oni-progress';
     const banner=arcadeLayer.querySelector('.oni');
-    if(banner) banner.append(progress);
+    if(banner){
+      banner.append(progress);
+      const close=document.createElement('button');close.type='button';close.className='oni-close';
+      close.textContent=appSettings.lang==='on'?'Close':'閉じる';
+      close.addEventListener('click',event=>{
+        event.stopPropagation();
+        if(!oniPartyActive)return;
+        oniCompleted[questionTypeSelect.value]=true;
+        clearArcade(.3);syncArcadeUI();startButton.focus({preventScroll:true});
+      });
+      banner.append(close);
+    }
     try { playOniPartyMusic(); } catch(error) { console.warn('Celebration audio unavailable',error); }
     oniPartyTimer=setTimeout(()=>{oniCompleted[questionTypeSelect.value]=true;clearArcade();syncArcadeUI();},10300);
   }
@@ -3654,11 +3686,15 @@ function recordPracticeChord(def,sequence,plan){
     limiter.threshold.value=-17;limiter.knee.value=12;limiter.ratio.value=8;
     master.connect(limiter).connect(ctx.destination);
     const sources=[]; let ended=false, cleanup;
-    function stop(){
+    function stop(fadeSeconds=0){
       if(ended)return;ended=true;clearTimeout(cleanup);
-      master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(0,ctx.currentTime,.008);
-      sources.forEach(source=>{try{source.stop(ctx.currentTime+.04);}catch(_){}});
-      setTimeout(()=>{master.disconnect();limiter.disconnect();},80);
+      const release=typeof fadeSeconds==='number' && fadeSeconds>0?fadeSeconds:.04;
+      const at=ctx.currentTime;
+      if(master.gain.cancelAndHoldAtTime)master.gain.cancelAndHoldAtTime(at);
+      else {const level=master.gain.value;master.gain.cancelScheduledValues(at);master.gain.setValueAtTime(level,at);}
+      master.gain.linearRampToValueAtTime(0,at+release);
+      sources.forEach(source=>{try{source.stop(at+release+.02);}catch(_){}});
+      setTimeout(()=>{master.disconnect();limiter.disconnect();},release*1000+60);
       arcadeStops.delete(stop);activeVoices.delete(stop);queueAudioIdle();
     }
     arcadeStops.add(stop);activeVoices.add(stop);
