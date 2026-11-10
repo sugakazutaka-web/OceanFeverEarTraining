@@ -388,7 +388,7 @@ body.oni-party #arcade-fx:before { content:''; position:absolute; inset:0; z-ind
 .arcade-banner.fever-start small {white-space:pre-line;line-height:1.65;font-size:14px;}
 .arcade-banner.fever-start .oni-character {width:min(240px,30vh);height:min(240px,30vh);}
 .arcade-banner.fever-start .oni-speech {font-size:clamp(18px,2.8vw,var(--speech-max,28px));}
-.arcade-banner.fever-start .fever-start-stars {margin-top:5px;font-size:20px;}
+.arcade-banner.fever-start .fever-start-stars,.arcade-banner.hot .fever-start-stars {margin-top:5px;font-size:20px;}
 
 
 /* Phone/tablet default: stop permanent repaint work and bound transient effects. */
@@ -861,7 +861,7 @@ body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);whit
   #instrument-select,#question-type,#note-count{font-size:16px;}
 }
 /* Keep Coral out of the flow: the card geometry no longer depends on visibility. */
-#start,#replay,#play-chord-arpeggio{font-weight:500;}
+#start,#replay,#play-chord-arpeggio{font-weight:400;}
 #instrument-select,#question-type,#note-count,
 #instrument-select option,#question-type option,#note-count option{font-weight:400;}
 #instrument-select:focus,#instrument-select:focus-visible,
@@ -1088,7 +1088,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         startBtn: "▶ 問題を出す",
         undoBtn: "↶ 1音戻る",
         replayBtn: "🔊 もう一度聴く",
-        viewResultBtn: "👁️ 正解を確認",
+        viewResultBtn: "✓ 正解を確認",
         playChordBtn: "🎸 コードを鳴らす",
         initialMsg: "「問題を出す」を押してください",
         chordTitleLabel: "コード名",
@@ -1126,7 +1126,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         startBtn: "▶ Play Question",
         undoBtn: "↶ Undo Note",
         replayBtn: "🔊 Listen Again",
-        viewResultBtn: "👁️ Show Answer",
+        viewResultBtn: "✓ Show Answer",
         playChordBtn: "🎸 Play Chord",
         initialMsg: "Click 'Start Game' to begin",
         chordTitleLabel: "CHORD",
@@ -3476,7 +3476,7 @@ function recordPracticeChord(def,sequence,plan){
     wrapPopupJapanese(subtitle);
     banner.append(title);
     if(kind!=='oni') banner.append(subtitle);
-    if(kind==='unlock') { const stars=document.createElement('div'); stars.className='fever-start-stars'; stars.textContent='★ ★ ★ ★ ★'; banner.append(stars); }
+    if(kind==='unlock' || kind==='hot') { const stars=document.createElement('div'); stars.className='fever-start-stars'; stars.textContent='★ ★ ★ ★ ★'; banner.append(stars); }
     if(kind==='oni') {
       const character=document.createElement('img');character.className='oni-character';character.src=mascotImage;character.alt=english?'Coral celebrating':'お祝いするコーラル';
       const speech=document.createElement('div');speech.className='oni-speech';speech.textContent=english?'15 COMBO\nLet’s party!!':'15 COMBO の\nお祭りだー!!';
