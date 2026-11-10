@@ -831,12 +831,12 @@ body .instrument,body .top-controls{animation:none!important;box-shadow:none!imp
 body .oni-character,body .ending-character{filter:none!important;}
 body .arcade-banner,body .ending-dialog,body .resident-mascot{box-shadow:none!important;}
 body.oni-party #arcade-fx:before{animation:none!important;opacity:.065;}
-body.oni-party #arcade-fx .arcade-particle{animation-iteration-count:1!important;}
+body.oni-party #arcade-fx .oni-row-star{animation-iteration-count:infinite!important;}
 body.arcade-listening .fever-ribbon{opacity:1;}
 @media(min-width:768px){.oni-speech{--speech-max:28px;}}
 
 /* Preserve the complete static ONI palette after removing the Lite switch. */
-body.fever-oni .top-controls{background:linear-gradient(120deg,#88477b,#5d4899,#22798b,#88477b);background-size:100% 100%!important;background-position:0 0;}
+body.fever-oni .top-controls,body.endless-top-level .top-controls{background:linear-gradient(120deg,#88477b,#5d4899,#22798b,#88477b);background-size:100% 100%!important;background-position:0 0;}
 body.endless-mode .coral-cheer strong{letter-spacing:normal;margin-bottom:10px;}
 @media(min-width:651px) and (orientation:landscape){
   #ending-dialog #ending-invitation,.ending-dialog:not(.challenge-dialog) #ending-invitation{font-size:clamp(17px,2.8vw,28px)!important;}
@@ -846,6 +846,9 @@ body.endless-mode .coral-cheer strong{letter-spacing:normal;margin-bottom:10px;}
   .studio-header>.header-effects{grid-column:2;grid-row:1;}
   .studio-header>#reset-game{grid-column:3;grid-row:1;margin:0;}
 }
+
+/* Reveal the orb to the left without moving or resizing Coral or the right crop edge. */
+body.endless-mode .coral-cheer .coral-portrait{overflow:visible;clip-path:inset(0 0 0 -15%);}
 </style>
 </head>
 <body>
