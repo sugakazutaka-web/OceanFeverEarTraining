@@ -861,7 +861,7 @@ body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);whit
   #instrument-select,#question-type,#note-count{font-size:16px;}
 }
 /* Keep Coral out of the flow: the card geometry no longer depends on visibility. */
-#start,#replay,#play-chord-arpeggio{font-weight:400;}
+#start,#replay,#play-chord-arpeggio{font-weight:420;}
 #instrument-select,#question-type,#note-count,
 #instrument-select option,#question-type option,#note-count option{font-weight:400;}
 #instrument-select:focus,#instrument-select:focus-visible,
@@ -898,7 +898,20 @@ html.coral-ios-viewport .ending-dialog[open]{
   bottom:auto;margin:0 auto;
   max-height:calc(var(--coral-viewport-height,100dvh) - max(env(safe-area-inset-top,0px),var(--coral-system-inset,0px)) - env(safe-area-inset-bottom,0px) - 16px);
 }
-html:lang(en) #start,html:lang(en) #replay,html:lang(en) #play-chord-arpeggio{font-weight:500;}
+
+
+/* Allow phrase wrapping inside the clear message, with room for its tilt. */
+body.normal-mode .ending-dialog #ending-invitation{
+  box-sizing:border-box;max-width:calc(100% - 12px);
+  margin-inline:6px;overflow-wrap:break-word;
+}
+
+/* Keep the question and its reply in the same reserved layout. */
+.challenge-dialog .oni-speech{display:block;box-sizing:border-box;width:100%;max-width:100%;}
+.challenge-dialog.challenge-reply .challenge-choices{visibility:hidden;pointer-events:none;}
+.ending-dialog.practice-ending #ending-invitation{font-size:clamp(20px,2.8vw,24px)!important;}
+.coral-welcome .welcome-start,.coral-welcome .welcome-modes button{font-size:16px;}
+.coral-welcome .practice-hint,.coral-welcome .practice-entry{font-size:16px;}
 </style>
 </head>
 <body>
@@ -996,14 +1009,14 @@ html:lang(en) #start,html:lang(en) #replay,html:lang(en) #play-chord-arpeggio{fo
         <div class="top-controls" data-session-name="Normal">
           <div class="action-row">
             <button id="start" class="primary-btn" type="button">▶ 問題を出す</button>
-            <button id="replay" class="secondary" type="button" disabled>🔊 もう一度聴く</button>
+            <button id="replay" class="secondary" type="button" disabled>もう一度聴く</button>
           </div>
 
           <div class="status-container">
             <div class="chord-row">
               <div><div class="status-label" id="target-label" hidden>コード名</div><div id="target-title">---</div></div>
               <div class="chord-actions">
-                <button id="play-chord-arpeggio" class="small-btn" type="button" disabled>♫ コードを鳴らす</button>
+                <button id="play-chord-arpeggio" class="small-btn" type="button" disabled>コードを鳴らす</button>
               </div>
             </div>
             <div id="status-box" aria-live="polite"><span id="status-message"></span></div>
@@ -1102,9 +1115,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         optRandom: "高い",
         startBtn: "▶ 問題を出す",
         undoBtn: "↶ 1音戻る",
-        replayBtn: "🔊 もう一度聴く",
+        replayBtn: "もう一度聴く",
         viewResultBtn: "✓ 正解を確認",
-        playChordBtn: "🎸 コードを鳴らす",
+        playChordBtn: "コードを鳴らす",
         initialMsg: "「問題を出す」を押してください",
         chordTitleLabel: "コード名",
         scaleTitleLabel: "スケール名",
@@ -1140,9 +1153,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         optRandom: "High",
         startBtn: "▶ Play Question",
         undoBtn: "↶ Undo Note",
-        replayBtn: "🔊 Listen Again",
+        replayBtn: "Listen Again",
         viewResultBtn: "✓ Show Answer",
-        playChordBtn: "🎸 Play Chord",
+        playChordBtn: "Play Chord",
         initialMsg: "Click 'Start Game' to begin",
         chordTitleLabel: "CHORD",
         scaleTitleLabel: "SCALE",
@@ -4053,6 +4066,7 @@ function recordPracticeChord(def,sequence,plan){
       perfect?(en?'It’s time for the Coral Band’s live show!\nLet’s party together!':'さあ、コーラルのライブだよ。\nみんなで一緒に盛り上がろー！'):
       (en?'Keep going and aim for 30 correct answers in a row♪':'30問連続正解を目指してがんばってね♪');
     if(!endless){wrapPopupJapanese(invitation);if(!perfect)wrapPopupJapanese(endingTitle);}
+    endingDialog.classList.toggle('practice-ending',practiceMode());
     if(practiceMode()){
       const count=roundLimit();
       endingBadge.textContent=`★ ${count} QUESTIONS COMPLETE ★`;
@@ -4153,6 +4167,23 @@ function recordPracticeChord(def,sequence,plan){
   let challengeAnswered=false;
   let challengeMode='chord';
   let challengeSavedControls=[];
+  function challengeReplyText(harder){
+    return appSettings.lang==='on' ? (harder?'Let’s try the High difficulty setting!':"You're on a roll! Keep it up!") : (harder?'じゃあ、難易度「高い」設定に挑戦だー！':'その調子でがんばって！');
+  }
+  function reserveChallengeSpeech(){
+    if(!challengeDialog.open)return;
+    challengeSpeech.style.minHeight='';
+    const saved=Array.from(challengeSpeech.childNodes).map(node=>node.cloneNode(true));
+    let height=challengeSpeech.offsetHeight;
+    for(const harder of [true,false]){
+      challengeSpeech.textContent=challengeReplyText(harder);
+      wrapPopupJapanese(challengeSpeech);
+      height=Math.max(height,challengeSpeech.offsetHeight);
+    }
+    challengeSpeech.replaceChildren(...saved);
+    challengeSpeech.style.minHeight=height+'px';
+  }
+  window.addEventListener('resize',reserveChallengeSpeech);
   function beginRootChallenge() {
     const generation=gameGeneration;
     clearArcade();
@@ -4174,7 +4205,7 @@ function recordPracticeChord(def,sequence,plan){
     controls.forEach(control=>{control.disabled=true;});
     setTimeout(()=>{
       if(!challengeActive || generation!==gameGeneration) return;
-      challengeDialog.showModal();challengeDialog.querySelector('#challenge-title').focus({preventScroll:true});
+      challengeDialog.showModal();reserveChallengeSpeech();challengeDialog.querySelector('#challenge-title').focus({preventScroll:true});
     },1000);
   }
   function answerRootChallenge(harder) {
@@ -4183,8 +4214,9 @@ function recordPracticeChord(def,sequence,plan){
     challengeAnswered=true;
     challengeDialog.classList.add('challenge-reply');
     challengeYes.disabled=challengeNo.disabled=true;
-    challengeChoices.hidden=true;
-    challengeSpeech.textContent=appSettings.lang==='on' ? (harder?'Let’s try the High difficulty setting!':"You're on a roll! Keep it up!") : (harder?'じゃあ、難易度「高い」設定に挑戦だー！':'その調子でがんばって！');
+    // Keep the choices row in the layout while hiding the answered controls.
+    challengeChoices.hidden=false;
+    challengeSpeech.textContent=challengeReplyText(harder);
     wrapPopupJapanese(challengeSpeech);
     setTimeout(()=>{
       if(generation!==gameGeneration || !challengeActive) return;
@@ -4301,7 +4333,7 @@ function recordPracticeChord(def,sequence,plan){
   // Explicit phrase boundaries keep Japanese popup copy readable at every viewport width.
   function wrapPopupJapanese(element){
     if(appSettings.lang==='on') return;
-    const boundaries=['難易度「高い」設定に','あと10回連続、','あと5回連続、','お見事！ ','音をキャッチ！ · ','惜しい！ ','もう一度、','5連続正解！ ','フィーバータイム、','問題が','10連続正解！ ','海が燃える、','15連続正解！ ','伝説の','フィーバー終了…。','ちょっと','じゃあ、','その調子で','他のモードにも','30問連続正解を','目指して','今日も海の底で、','私と一緒に','イヤートレーニング','全30問 · ','全100問 · ','10連続正解ごとに','コーラルが','30問','100問'];
+    const boundaries=['さあ、','コーラルの','ライブだよ。','みんなで','一緒に','盛り上がろー！','難易度「高い」設定に','あと10回連続、','あと5回連続、','お見事！ ','音をキャッチ！ · ','惜しい！ ','もう一度、','5連続正解！ ','フィーバータイム、','問題が','10連続正解！ ','海が燃える、','15連続正解！ ','伝説の','フィーバー終了…。','ちょっと','じゃあ、','その調子で','他のモードにも','30問連続正解を','目指して','今日も海の底で、','私と一緒に','イヤートレーニング','全30問 · ','全100問 · ','10連続正解ごとに','コーラルが','30問','100問'];
     let text=element.textContent;
     // Prefer the longest boundary at a given position (e.g. 30問連続正解を before 30問).
     const parts=[];let from=0;
@@ -4371,7 +4403,7 @@ function recordPracticeChord(def,sequence,plan){
   mxlModeButton.addEventListener('click',openOriginalLoader);
   normalModeButton.addEventListener('click',()=>chooseSessionMode('normal'));
   endlessModeButton.addEventListener('click',()=>chooseSessionMode('endless'));
-  const welcomeStart=document.createElement('button');welcomeStart.type='button';welcomeStart.className='primary-btn';
+  const welcomeStart=document.createElement('button');welcomeStart.type='button';welcomeStart.className='primary-btn welcome-start';
   const practiceHint=document.createElement('small');practiceHint.className='practice-hint';
   const practiceEntry=document.createElement('button');practiceEntry.type='button';practiceEntry.className='practice-entry';
   const practiceDialog=document.createElement('dialog');practiceDialog.className='coral-welcome practice-dialog';
