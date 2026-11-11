@@ -61,6 +61,16 @@ function returnToGame(){
     window.location.href=new URL('index.html',window.location.href).href;
   }
 }
+function notifyViewportReturn(){
+  if(embedded)window.parent.postMessage({type:'coral-live-viewport'},window.location.origin==='null'?'*':window.location.origin);
+}
+window.addEventListener('resize',notifyViewportReturn);
+window.addEventListener('focus',notifyViewportReturn);
+window.addEventListener('pageshow',notifyViewportReturn);
+document.addEventListener('fullscreenchange',notifyViewportReturn);
+document.addEventListener('webkitfullscreenchange',notifyViewportReturn);
+document.addEventListener('webkitendfullscreen',notifyViewportReturn,true);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)notifyViewportReturn();});
 document.querySelector('#return').addEventListener('click',returnToGame);
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();returnToGame();}});
 </script>

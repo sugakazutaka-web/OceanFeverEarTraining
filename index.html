@@ -884,6 +884,21 @@ body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);whit
   .chord-actions{width:max-content;min-width:104px;}
   .top-controls .chord-actions .resident-mascot.coral-portrait{right:20px;width:80px;height:64px;aspect-ratio:auto;}
 }
+
+/* Preserve the status-bar space if iOS expands its viewport after native video. */
+html.coral-ios-viewport .app-viewport-wrapper{padding-top:var(--coral-system-inset,0px);}
+html.coral-ios-viewport .coral-live-dialog{
+  top:calc(var(--coral-viewport-top,0px) + max(env(safe-area-inset-top,0px),var(--coral-system-inset,0px)) + 8px);
+  bottom:auto;margin:0 auto;
+  height:min(820px,calc(var(--coral-viewport-height,100dvh) - max(env(safe-area-inset-top,0px),var(--coral-system-inset,0px)) - env(safe-area-inset-bottom,0px) - 16px));
+  max-height:calc(var(--coral-viewport-height,100dvh) - max(env(safe-area-inset-top,0px),var(--coral-system-inset,0px)) - env(safe-area-inset-bottom,0px) - 16px);
+}
+html.coral-ios-viewport .ending-dialog[open]{
+  top:calc(var(--coral-viewport-top,0px) + max(env(safe-area-inset-top,0px),var(--coral-system-inset,0px)) + 8px);
+  bottom:auto;margin:0 auto;
+  max-height:calc(var(--coral-viewport-height,100dvh) - max(env(safe-area-inset-top,0px),var(--coral-system-inset,0px)) - env(safe-area-inset-bottom,0px) - 16px);
+}
+html:lang(en) #start,html:lang(en) #replay,html:lang(en) #play-chord-arpeggio{font-weight:500;}
 </style>
 </head>
 <body>
@@ -3902,14 +3917,68 @@ function recordPracticeChord(def,sequence,plan){
   const liveFrameHost=document.createElement('div');liveFrameHost.className='coral-live-frame-host';
   liveDialog.append(liveFrameHost);document.body.append(liveDialog);
   let liveFrame=null;
+  const coralIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||
+    (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const coralStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  // Capture the normal viewport before a video can enter native fullscreen.
+  const coralInitialViewport={width:window.innerWidth,height:window.innerHeight};
+  let coralViewportEnabled=false,coralViewportFrame=0;
+  let coralRecoveryTimers=[];
+  function syncCoralViewport(){
+    if(!coralViewportEnabled)return;
+    const root=document.documentElement,v=window.visualViewport;
+    if(v&&Math.abs(v.scale-1)>.01)return;
+    const growth=window.innerHeight-coralInitialViewport.height;
+    const sameWidth=Math.abs(window.innerWidth-coralInitialViewport.width)<2;
+    const inset=coralStandalone&&sameWidth&&growth>0&&growth<=64?growth:0;
+    root.style.setProperty('--coral-system-inset',inset+'px');
+    root.style.setProperty('--coral-viewport-top',(v?v.offsetTop:0)+'px');
+    root.style.setProperty('--coral-viewport-height',(v?v.height:window.innerHeight)+'px');
+  }
+  function queueCoralViewport(){
+    if(!coralViewportEnabled||coralViewportFrame)return;
+    coralViewportFrame=requestAnimationFrame(()=>{coralViewportFrame=0;syncCoralViewport();});
+  }
+  function recoverCoralViewport(){
+    if(!coralViewportEnabled)return;
+    coralRecoveryTimers.forEach(clearTimeout);
+    const restore=()=>{
+      // The background remains locked while the ending dialog is underneath.
+      if(popupScrollState&&scrollLockedDialogs.size){
+        document.body.style.top=(-popupScrollState.y)+'px';
+        document.body.style.left=(-popupScrollState.x)+'px';
+        window.scrollTo({left:0,top:0,behavior:'instant'});
+      }
+      syncCoralViewport();
+    };
+    restore();
+    // Native iOS fullscreen finishes updating its viewport asynchronously.
+    coralRecoveryTimers=[100,350,800].map(delay=>setTimeout(restore,delay));
+  }
+  window.addEventListener('resize',queueCoralViewport);
+  window.addEventListener('orientationchange',recoverCoralViewport);
+  window.addEventListener('focus',recoverCoralViewport);
+  window.addEventListener('pageshow',recoverCoralViewport);
+  window.visualViewport?.addEventListener('resize',queueCoralViewport);
+  window.visualViewport?.addEventListener('scroll',queueCoralViewport);
+  document.addEventListener('fullscreenchange',recoverCoralViewport);
+  document.addEventListener('webkitfullscreenchange',recoverCoralViewport);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)recoverCoralViewport();});
+
   function closeCoralLive(){
     // Destroy the nested player so playback cannot continue behind the game.
     liveFrameHost.replaceChildren();liveFrame=null;
     if(liveDialog.open)liveDialog.close();
     if(endingDialog.open)coralLiveLink.focus({preventScroll:true});
+    recoverCoralViewport();
   }
   function openCoralLive(){
     if(liveDialog.open)return;
+    if(coralIOS){
+      coralViewportEnabled=true;
+      document.documentElement.classList.add('coral-ios-viewport');
+      syncCoralViewport();
+    }
     const en=appSettings.lang==='on';
     clearArcade();stopArcadeAudio();activeVoices.forEach(stop=>stop());
     const url=new URL('live.html',window.location.href);
@@ -3931,6 +4000,7 @@ function recordPracticeChord(def,sequence,plan){
     if(!liveDialog.open||!liveFrame||event.source!==liveFrame.contentWindow)return;
     if(event.origin!==window.location.origin)return;
     if(event.data?.type==='coral-live-close')closeCoralLive();
+    if(event.data?.type==='coral-live-viewport')recoverCoralViewport();
   });
 
   let endingHintTimer;
