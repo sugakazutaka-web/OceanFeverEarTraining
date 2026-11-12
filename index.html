@@ -856,7 +856,7 @@ body.normal-mode .arcade-banner small{font-size:14px;}
 body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);white-space:pre-line;}
 .oni-close{display:block;pointer-events:auto;margin:10px auto 0;min-height:30px;padding:4px 14px;font-size:12px;font-weight:400;color:#c6d5df;background:#253b52;border:1px solid #607386;box-shadow:none;}
 #start,#replay{font-size:15px;}
-#play-chord-arpeggio{font-size:12px;}
+#play-chord-arpeggio{font-size:15px;}
 @media(min-width:651px) and (orientation:landscape){
   #instrument-select,#question-type,#note-count{font-size:16px;}
 }
@@ -1024,7 +1024,7 @@ body.mix-mode .ending-dialog #ending-invitation{font-size:clamp(18px,2.8vw,24px)
             <div class="chord-row">
               <div><div class="status-label" id="target-label" hidden>コード名</div><div id="target-title">---</div></div>
               <div class="chord-actions">
-                <button id="play-chord-arpeggio" class="small-btn" type="button" disabled>コードを鳴らす</button>
+                <button id="play-chord-arpeggio" class="small-btn" type="button" disabled>コード再生</button>
               </div>
             </div>
             <div id="status-box" aria-live="polite"><span id="status-message"></span></div>
@@ -1125,7 +1125,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         undoBtn: "↶ 1音戻る",
         replayBtn: "もう一度聴く",
         viewResultBtn: "✓ 正解を確認",
-        playChordBtn: "コードを鳴らす",
+        playChordBtn: "コード再生",
         initialMsg: "「問題を出す」を押してください",
         chordTitleLabel: "コード名",
         scaleTitleLabel: "スケール名",
