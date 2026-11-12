@@ -920,6 +920,12 @@ html:lang(en) #start,html:lang(en) #replay,html:lang(en) #play-chord-arpeggio{fo
 .mix-level-dialog .mix-level-options button{font-size:16px;}
 body.mix-mode .coral-cheer .oni-speech{font-size:clamp(18px,4vw,24px);}
 body.mix-mode .ending-dialog #ending-invitation{font-size:clamp(18px,2.8vw,24px)!important;}
+
+/* Decorative Coral portraits do not offer image selection or dragging. */
+.coral-welcome>img,.ending-character{
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;-webkit-user-drag:none;pointer-events:none;
+}
 </style>
 </head>
 <body>
@@ -3915,7 +3921,7 @@ function recordPracticeChord(def,sequence,plan){
   endingDialog.setAttribute('aria-describedby','ending-invitation');
   const endingTitle=document.createElement('h2');endingTitle.id='ending-title';
   const endingBadge=document.createElement('div');endingBadge.className='ending-badge';
-  const endingCharacter=document.createElement('img');endingCharacter.className='ending-character';endingCharacter.src=mascotImage;endingCharacter.alt='海の魔法使い・コーラル';
+  const endingCharacter=document.createElement('img');endingCharacter.className='ending-character';endingCharacter.draggable=false;endingCharacter.src=mascotImage;endingCharacter.alt='海の魔法使い・コーラル';
   const invitation=document.createElement('div');invitation.id='ending-invitation';invitation.className='oni-speech';
   const endingOK=document.createElement('button');endingOK.type='button';endingOK.className='ending-ok primary-btn';
   const endingStats=document.createElement('p');endingStats.className='round-results';
@@ -4160,7 +4166,7 @@ function recordPracticeChord(def,sequence,plan){
   challengeDialog.setAttribute('aria-labelledby','challenge-title');
   challengeDialog.innerHTML='<h2 id="challenge-title" tabindex="-1" autofocus>20 COMBO!</h2>';
   const challengeCharacter=document.createElement('img');
-  challengeCharacter.className='ending-character';challengeCharacter.src=mascotImage;
+  challengeCharacter.className='ending-character';challengeCharacter.draggable=false;challengeCharacter.src=mascotImage;
   challengeCharacter.alt='海の魔法使い・コーラル';
   const challengeSpeech=document.createElement('div');
   challengeSpeech.className='oni-speech';challengeSpeech.setAttribute('aria-live','polite');
@@ -4388,7 +4394,7 @@ function recordPracticeChord(def,sequence,plan){
   const welcomeDialog=document.createElement('dialog');welcomeDialog.className='coral-welcome';
   welcomeDialog.setAttribute('aria-labelledby','coral-welcome-title');
   welcomeDialog.addEventListener('cancel',event=>event.preventDefault());
-  const welcomeCoral=document.createElement('img');welcomeCoral.src=mascotImage;
+  const welcomeCoral=document.createElement('img');welcomeCoral.draggable=false;welcomeCoral.src=mascotImage;
   const welcomeTitle=document.createElement('h2');welcomeTitle.id='coral-welcome-title';welcomeTitle.tabIndex=-1;
   const welcomeListen=document.createElement('button');welcomeListen.type='button';welcomeListen.className='welcome-listen';
   const welcomeMessage=document.createElement('p');
@@ -5081,7 +5087,7 @@ function setMixLevel(level,randomSelection=false){
 }
 const mixLevelDialog=document.createElement('dialog');
 mixLevelDialog.className='coral-welcome mix-level-dialog';
-const mixLevelCoral=document.createElement('img');mixLevelCoral.src=mascotImage;
+const mixLevelCoral=document.createElement('img');mixLevelCoral.draggable=false;mixLevelCoral.src=mascotImage;
 const mixLevelTitle=document.createElement('h2');mixLevelTitle.id='mix-level-title';mixLevelTitle.tabIndex=-1;
 mixLevelDialog.setAttribute('aria-labelledby',mixLevelTitle.id);
 const mixLevelOptions=document.createElement('div');mixLevelOptions.className='mix-level-options';
