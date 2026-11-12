@@ -951,9 +951,10 @@ body.endless-mode #deck-counter,body.mix-mode #deck-counter{
   }
 }
 
-/* Purple outer background through FEVER and HOT; ONI keeps its blue palette. */
-body.normal-mode.fever-active:not(.fever-oni){
-  background:radial-gradient(ellipse at 50% 10%,#ba88d644,transparent 70%),linear-gradient(145deg,#483369,#292b57);
+/* Pink frames remain through FEVER and HOT; ONI keeps its existing frames. */
+body.normal-mode.fever-active:not(.fever-oni) .top-controls,
+body.normal-mode.fever-active:not(.fever-oni) #status-box{
+  border-color:#ff90cd;
 }
 </style>
 </head>
