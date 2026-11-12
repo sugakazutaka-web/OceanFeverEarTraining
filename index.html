@@ -3496,7 +3496,7 @@ function recordPracticeChord(def,sequence,plan){
   }
   function syncArcadeUI() {
     const sessionName = sessionMode === 'practice'
-      ? (practiceVariant === 'c' ? 'Interval practice (in C)' : 'Chord practice (in C)')
+      ? (practiceVariant === 'c' ? 'Interval practice' : 'Chord practice')
       : ({normal:'Normal',endless:'Marathon',mix:'Mix',mxl:'mxl'}[sessionMode] || 'Normal');
     document.querySelector('.top-controls').dataset.sessionName = sessionName;
     refreshExtraUI();
