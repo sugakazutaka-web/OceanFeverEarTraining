@@ -833,7 +833,7 @@ body .arcade-banner,body .ending-dialog,body .resident-mascot{box-shadow:none!im
 body.oni-party #arcade-fx:before{animation:none!important;opacity:.065;}
 body.oni-party #arcade-fx .oni-row-star{animation-iteration-count:infinite!important;}
 body.arcade-listening .fever-ribbon{opacity:1;}
-@media(min-width:768px){.oni-speech{--speech-max:28px;}}
+@media(min-width:768px){body:not(.mix-mode) .oni-speech{--speech-max:28px;}}
 
 /* Preserve the complete static ONI palette after removing the Lite switch. */
 body.fever-oni .top-controls,body.endless-top-level .top-controls{background:linear-gradient(120deg,#88477b,#5d4899,#22798b,#88477b);background-size:100% 100%!important;background-position:0 0;}
@@ -911,7 +911,15 @@ body.normal-mode .ending-dialog #ending-invitation{
 .challenge-dialog.challenge-reply .challenge-choices{visibility:hidden;pointer-events:none;}
 .ending-dialog.practice-ending #ending-invitation{font-size:clamp(20px,2.8vw,24px)!important;}
 .coral-welcome .welcome-start,.coral-welcome .welcome-modes button{font-size:16px;}
-.coral-welcome .practice-hint,.coral-welcome .practice-entry{font-size:16px;}
+.coral-welcome .practice-entry{font-size:16px;}
+.coral-welcome .practice-hint{font-size:14px;margin-top:30px;}
+
+html:lang(en) #start,html:lang(en) #replay,html:lang(en) #play-chord-arpeggio{font-weight:500;}
+/* Mix mode uses the same limits on phones and desktops. */
+.mix-level-dialog #mix-level-title{font-size:clamp(18px,4.8vw,24px);}
+.mix-level-dialog .mix-level-options button{font-size:16px;}
+body.mix-mode .coral-cheer .oni-speech{font-size:clamp(18px,4vw,24px);}
+body.mix-mode .ending-dialog #ending-invitation{font-size:clamp(18px,2.8vw,24px)!important;}
 </style>
 </head>
 <body>
@@ -3446,6 +3454,7 @@ function recordPracticeChord(def,sequence,plan){
     document.querySelector('.top-controls').dataset.sessionName = sessionName;
     refreshExtraUI();
     document.body.classList.toggle('normal-mode',sessionMode==='normal');
+    document.body.classList.toggle('mix-mode',sessionMode==='mix');
     document.body.classList.toggle('endless-mode',sessionMode==='endless');
     document.body.classList.toggle('endless-middle-level',sessionMode==='endless' && endlessProgress.level===1);
     document.body.classList.toggle('endless-top-level',sessionMode==='endless' && endlessProgress.level===2);
@@ -5046,7 +5055,7 @@ function showSpecialEnding(){
   clearTimeout(endingDelayTimer);endingPending=false;clearArcade();activeVoices.forEach(stop=>stop());
   endingActive=true;game.phase='complete';startButton.disabled=replayButton.disabled=true;
   const en=appSettings.lang==='on',perfect=roundStats.correct===roundLimit(),custom=sessionMode==='mxl';
-  endingDialog.classList.remove('graduation-ending');
+  endingDialog.classList.remove('graduation-ending','practice-ending');
   endingTitle.textContent=perfect?(custom?(en?'All correct! You did it!':'全問正解！やったね！'):(en?'All correct! Congratulations!':'全問正解おめでとう！')):(en?`Well done on ${roundLimit()} questions!`:`${roundLimit()}問おつかれさま！`);
   endingBadge.textContent=`★ ${roundLimit()} QUESTIONS COMPLETE ★`;endingCharacter.src=mascotImage;
   endingCharacter.alt=en?'Coral':'コーラル';invitation.replaceChildren();
