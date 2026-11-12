@@ -856,7 +856,7 @@ body.normal-mode .arcade-banner small{font-size:14px;}
 body.normal-mode .arcade-banner.cheer25 .oni-speech{transform:rotate(-3deg);white-space:pre-line;}
 .oni-close{display:block;pointer-events:auto;margin:10px auto 0;min-height:30px;padding:4px 14px;font-size:12px;font-weight:400;color:#c6d5df;background:#253b52;border:1px solid #607386;box-shadow:none;}
 #start,#replay{font-size:15px;}
-#play-chord-arpeggio{font-size:15px;}
+#play-chord-arpeggio{font-size:14px;}
 @media(min-width:651px) and (orientation:landscape){
   #instrument-select,#question-type,#note-count{font-size:16px;}
 }
@@ -906,8 +906,9 @@ body.normal-mode .ending-dialog #ending-invitation{
   margin-inline:6px;overflow-wrap:break-word;
 }
 
-/* Keep the question and its reply in the same reserved layout. */
-.challenge-dialog .oni-speech{display:block;box-sizing:border-box;width:100%;max-width:100%;}
+/* Anchor the dialog and portrait; let the speech fit its current message. */
+dialog.challenge-dialog{top:5dvh;bottom:auto;margin-block:0;}
+.challenge-dialog .oni-speech{display:inline-block;box-sizing:border-box;width:auto;max-width:100%;}
 .challenge-dialog.challenge-reply .challenge-choices{visibility:hidden;pointer-events:none;}
 .ending-dialog.practice-ending #ending-invitation{font-size:clamp(20px,2.8vw,24px)!important;}
 .coral-welcome .welcome-start,.coral-welcome .welcome-modes button{font-size:16px;}
@@ -4185,20 +4186,6 @@ function recordPracticeChord(def,sequence,plan){
   function challengeReplyText(harder){
     return appSettings.lang==='on' ? (harder?'Let’s try the High difficulty setting!':"You're on a roll! Keep it up!") : (harder?'じゃあ、難易度「高い」設定に挑戦だー！':'その調子でがんばって！');
   }
-  function reserveChallengeSpeech(){
-    if(!challengeDialog.open)return;
-    challengeSpeech.style.minHeight='';
-    const saved=Array.from(challengeSpeech.childNodes).map(node=>node.cloneNode(true));
-    let height=challengeSpeech.offsetHeight;
-    for(const harder of [true,false]){
-      challengeSpeech.textContent=challengeReplyText(harder);
-      wrapPopupJapanese(challengeSpeech);
-      height=Math.max(height,challengeSpeech.offsetHeight);
-    }
-    challengeSpeech.replaceChildren(...saved);
-    challengeSpeech.style.minHeight=height+'px';
-  }
-  window.addEventListener('resize',reserveChallengeSpeech);
   function beginRootChallenge() {
     const generation=gameGeneration;
     clearArcade();
@@ -4220,7 +4207,7 @@ function recordPracticeChord(def,sequence,plan){
     controls.forEach(control=>{control.disabled=true;});
     setTimeout(()=>{
       if(!challengeActive || generation!==gameGeneration) return;
-      challengeDialog.showModal();reserveChallengeSpeech();challengeDialog.querySelector('#challenge-title').focus({preventScroll:true});
+      challengeDialog.showModal();challengeDialog.querySelector('#challenge-title').focus({preventScroll:true});
     },1000);
   }
   function answerRootChallenge(harder) {
@@ -4449,6 +4436,16 @@ function recordPracticeChord(def,sequence,plan){
   practiceStageDialog.append(practiceStageFace,practiceStageSpeech);document.body.append(practiceStageDialog);
   practiceStageDialog.addEventListener('cancel',event=>event.preventDefault());
   let practiceStageTimer;
+  function closePracticeStage(){
+    clearTimeout(practiceStageTimer);
+    if(practiceStageDialog.open)practiceStageDialog.close();
+  }
+  document.addEventListener('click',event=>{
+    if(!practiceStageDialog.open)return;
+    event.preventDefault();event.stopImmediatePropagation();closePracticeStage();
+  },true);
+  practiceStageDialog.addEventListener('close',()=>clearTimeout(practiceStageTimer));
+
   function showPracticeStage(advanced){
     clearTimeout(practiceStageTimer);clearArcade();
     if(advanced!==true)playWarpJingle();
@@ -4458,7 +4455,7 @@ function recordPracticeChord(def,sequence,plan){
       ? ['Let’s explore','the 26 chord types','featured in this game♪']
       : ['このゲームで出題される','26種類のコード・タイプを','体験しよう♪']);
     practiceStageDialog.showModal();
-    practiceStageTimer=setTimeout(()=>{practiceStageDialog.close();},3000);
+    practiceStageTimer=setTimeout(closePracticeStage,3000);
   }
   function startPractice(variant){
     practiceSavedSettings={type:questionTypeSelect.value,count:noteCountSelect.value};
@@ -4870,7 +4867,7 @@ function refreshExtraUI(){
   }
   if(custom)welcomeModeNote.textContent=en?'Import your own MusicXML question set':'MXLファイルからオリジナル問題集を読み込み';
 }
-async function showModeAnnouncement(phrases,english,duration){
+async function showModeAnnouncement(phrases,english,duration,tapToDismiss=false){
   const generation=gameGeneration;
   game.phase='playing';startButton.disabled=replayButton.disabled=true;instrumentSelect.disabled=true;
   const banner=document.createElement('div');banner.className='arcade-banner coral-cheer';banner.style.animationDuration=duration+'ms';
@@ -4890,7 +4887,26 @@ async function showModeAnnouncement(phrases,english,duration){
     speech.append(line);
   });
   banner.append(portrait,speech);arcadeLayer.append(banner);
-  await wait(duration);banner.remove();
+  if(tapToDismiss){
+    await new Promise(resolve=>{
+      // A transparent input shield also catches taps over disabled game controls.
+      const shield=document.createElement('div');
+      shield.style.cssText='position:fixed;inset:0;z-index:2147483647;background:transparent;touch-action:manipulation;';
+      let finished=false;
+      const finish=()=>{
+        if(finished)return;finished=true;
+        clearTimeout(timer);observer.disconnect();shield.remove();resolve();
+      };
+      shield.addEventListener('click',event=>{
+        event.preventDefault();event.stopPropagation();finish();
+      });
+      const observer=new MutationObserver(()=>{if(!banner.isConnected)finish();});
+      observer.observe(arcadeLayer,{childList:true});
+      const timer=setTimeout(finish,duration);
+      document.body.append(shield);
+    });
+  }else await wait(duration);
+  banner.remove();
   if(generation!==gameGeneration)return false;
   instrumentSelect.disabled=false;return true;
 }
@@ -4911,7 +4927,7 @@ async function prepareMixedQuestion(){
   if(showIntro){
     const phrases=[['コード、','スケール、','メロディ問題から','それぞれ5問だよ。'],'さあ、いっくよー！'];
     const english="You’ll get 5 questions each on chords, scales, and melodies.\nLet’s go!";
-    return showModeAnnouncement(phrases,english,4000);
+    return showModeAnnouncement(phrases,english,4000,true);
   }
   return true;
 }
