@@ -956,6 +956,16 @@ body.normal-mode.fever-active:not(.fever-oni) .top-controls,
 body.normal-mode.fever-active:not(.fever-oni) #status-box{
   border-color:#fff0a2;
 }
+
+.fever-side-lines {
+  position:absolute;
+  display:none;
+  pointer-events:none;
+  --line-width:clamp(3px, .425vw, 5px);
+  border-inline:var(--line-width) solid #f3c447;
+  border-radius:3px;
+}
+body.normal-mode.fever-active:not(.fever-oni) .fever-side-lines {display:block;}
 </style>
 </head>
 <body>
@@ -963,6 +973,7 @@ body.normal-mode.fever-active:not(.fever-oni) #status-box{
 <div id="arcade-fx" aria-hidden="true"></div>
   <div class="app-viewport-wrapper">
     <main>
+      <div class="fever-side-lines" aria-hidden="true"></div>
       <header class="studio-header"><div class="brand"><div class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><div class="brand-name">OCEAN FEVER</div><div class="brand-sub">LISTEN. HIT. CELEBRATE.</div></div></div><div class="header-effects"><button id="fx-toggle" type="button" aria-pressed="true">演出 ON</button></div><button id="reset-game" class="reset-game" type="button" aria-label="ゲームをリセット">↻ リセット</button></header>
       <div class="controls">
         <div class="settings-row">
@@ -5270,5 +5281,33 @@ extraUIReady=true;refreshExtraUI();
 
   </script>
 
+
+<script>
+(() => {
+  const main = document.querySelector('main');
+  const lines = main.querySelector('.fever-side-lines');
+  const chord = main.querySelector('.top-controls');
+  const settings = main.querySelector('.settings-row');
+  const board = main.querySelector('.instrument');
+  const landscape = matchMedia('(orientation: landscape)');
+  function alignLines() {
+    const origin = main.getBoundingClientRect();
+    const fretboard = board.getBoundingClientRect();
+    const chordTop = chord.getBoundingClientRect().top;
+    const top = landscape.matches ? Math.min(chordTop, settings.getBoundingClientRect().top) : chordTop;
+    const gap = 5;
+    lines.style.top = (top - origin.top) + 'px';
+    lines.style.height = Math.max(0, fretboard.bottom - top) + 'px';
+    lines.style.left = 'calc(' + (fretboard.left - origin.left - gap) + 'px - var(--line-width))';
+    lines.style.right = 'calc(' + (origin.right - fretboard.right - gap) + 'px - var(--line-width))';
+  }
+  const observer = new ResizeObserver(alignLines);
+  for (const element of [main, main.querySelector('.studio-header'), settings, chord, board]) {
+    observer.observe(element);
+  }
+  window.addEventListener('resize', alignLines);
+  alignLines();
+})();
+</script>
 </body>
 </html>
