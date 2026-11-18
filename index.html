@@ -4038,14 +4038,14 @@ function recordPracticeChord(def,sequence,plan){
     coralRecoveryTimers=[100,350,800].map(delay=>setTimeout(restore,delay));
   }
   window.addEventListener('resize',queueCoralViewport);
-  window.addEventListener('orientationchange',recoverCoralViewport);
-  window.addEventListener('focus',recoverCoralViewport);
-  window.addEventListener('pageshow',recoverCoralViewport);
+  window.addEventListener('orientationchange',queueCoralViewport);
+  window.addEventListener('focus',queueCoralViewport);
+  window.addEventListener('pageshow',queueCoralViewport);
   window.visualViewport?.addEventListener('resize',queueCoralViewport);
   window.visualViewport?.addEventListener('scroll',queueCoralViewport);
-  document.addEventListener('fullscreenchange',recoverCoralViewport);
-  document.addEventListener('webkitfullscreenchange',recoverCoralViewport);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)recoverCoralViewport();});
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)recoverCoralViewport();});
+  document.addEventListener('webkitfullscreenchange',()=>{if(!document.webkitFullscreenElement)recoverCoralViewport();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)queueCoralViewport();});
 
   function closeCoralLive(){
     // Destroy the nested player so playback cannot continue behind the game.
@@ -4082,7 +4082,10 @@ function recordPracticeChord(def,sequence,plan){
     if(!liveDialog.open||!liveFrame||event.source!==liveFrame.contentWindow)return;
     if(event.origin!==window.location.origin)return;
     if(event.data?.type==='coral-live-close')closeCoralLive();
-    if(event.data?.type==='coral-live-viewport')recoverCoralViewport();
+    if(event.data?.type==='coral-live-viewport'){
+      if(event.data.recover===true)recoverCoralViewport();
+      else queueCoralViewport();
+    }
   });
 
   let endingHintTimer;

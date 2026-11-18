@@ -24,6 +24,10 @@ button:focus-visible{outline:3px solid #8ce7ff;outline-offset:4px}
 @media(min-width:651px) and (orientation:landscape){
   .player{width:min(800px,100%,calc(max(140px,100dvh - 300px)*16/9));min-height:0;margin-inline:auto;}
 }
+
+html, body {overscroll-behavior-y:none;}
+html.live-content-fits {height:100%;overflow:hidden;}
+html.live-content-fits body {height:100%;min-height:0;overflow:hidden;}
 </style>
 </head>
 <body>
@@ -61,16 +65,43 @@ function returnToGame(){
     window.location.href=new URL('index.html',window.location.href).href;
   }
 }
-function notifyViewportReturn(){
-  if(embedded)window.parent.postMessage({type:'coral-live-viewport'},window.location.origin==='null'?'*':window.location.origin);
+const liveMain=document.querySelector('main');
+let viewportFrame=0;
+function updateLiveViewport(){
+  viewportFrame=0;
+  const viewport=window.visualViewport;
+  const zoomed=viewport && Math.abs(viewport.scale-1)>.01;
+  const height=Math.min(window.innerHeight,viewport?viewport.height:window.innerHeight);
+  const fits=!zoomed && liveMain.getBoundingClientRect().height<=height;
+  document.documentElement.classList.toggle('live-content-fits',fits);
 }
-window.addEventListener('resize',notifyViewportReturn);
-window.addEventListener('focus',notifyViewportReturn);
-window.addEventListener('pageshow',notifyViewportReturn);
-document.addEventListener('fullscreenchange',notifyViewportReturn);
-document.addEventListener('webkitfullscreenchange',notifyViewportReturn);
-document.addEventListener('webkitendfullscreen',notifyViewportReturn,true);
+function queueLiveViewport(){
+  if(!viewportFrame)viewportFrame=requestAnimationFrame(updateLiveViewport);
+}
+function notifyViewportReturn(recover=false){
+  queueLiveViewport();
+  if(embedded)window.parent.postMessage({type:'coral-live-viewport',recover},window.location.origin==='null'?'*':window.location.origin);
+}
+function notifyFullscreenExit(){
+  notifyViewportReturn(!document.fullscreenElement && !document.webkitFullscreenElement);
+}
+window.addEventListener('resize',()=>notifyViewportReturn());
+window.addEventListener('focus',()=>notifyViewportReturn());
+window.addEventListener('pageshow',()=>notifyViewportReturn());
+window.visualViewport?.addEventListener('resize',queueLiveViewport);
+new ResizeObserver(queueLiveViewport).observe(liveMain);
+document.fonts.ready.then(queueLiveViewport);
+document.addEventListener('fullscreenchange',notifyFullscreenExit);
+document.addEventListener('webkitfullscreenchange',notifyFullscreenExit);
+document.addEventListener('webkitendfullscreen',()=>notifyViewportReturn(true),true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)notifyViewportReturn();});
+// Suppress boundary dragging on fitted pages, including older iOS versions.
+document.addEventListener('touchmove',event=>{
+  if(event.touches.length===1 && document.documentElement.classList.contains('live-content-fits') && event.cancelable){
+    event.preventDefault();
+  }
+},{passive:false});
+queueLiveViewport();
 document.querySelector('#return').addEventListener('click',returnToGame);
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();returnToGame();}});
 </script>
