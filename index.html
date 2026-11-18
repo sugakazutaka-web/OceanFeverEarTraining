@@ -961,11 +961,13 @@ body.normal-mode.fever-active:not(.fever-oni) #status-box{
   position:absolute;
   display:none;
   pointer-events:none;
-  --line-width:clamp(3px, .425vw, 5px);
+  --line-width:clamp(1px, .2125vw, 2px);
   border-inline:var(--line-width) solid #f3c447;
   border-radius:3px;
 }
-body.normal-mode.fever-active:not(.fever-oni) .fever-side-lines {display:block;}
+body.normal-mode.fever-active .fever-side-lines {display:block;}
+body.normal-mode.fever-active.fever-hot .fever-side-lines {border-color:#ff69b4;}
+body.normal-mode.fever-active.fever-oni .fever-side-lines {border-color:#40e0d0;}
 </style>
 </head>
 <body>
@@ -5295,11 +5297,10 @@ extraUIReady=true;refreshExtraUI();
     const fretboard = board.getBoundingClientRect();
     const chordTop = chord.getBoundingClientRect().top;
     const top = landscape.matches ? Math.min(chordTop, settings.getBoundingClientRect().top) : chordTop;
-    const gap = 5;
     lines.style.top = (top - origin.top) + 'px';
     lines.style.height = Math.max(0, fretboard.bottom - top) + 'px';
-    lines.style.left = 'calc(' + (fretboard.left - origin.left - gap) + 'px - var(--line-width))';
-    lines.style.right = 'calc(' + (origin.right - fretboard.right - gap) + 'px - var(--line-width))';
+    lines.style.left = -origin.left + 'px';
+    lines.style.right = (origin.right - document.documentElement.clientWidth) + 'px';
   }
   const observer = new ResizeObserver(alignLines);
   for (const element of [main, main.querySelector('.studio-header'), settings, chord, board]) {
