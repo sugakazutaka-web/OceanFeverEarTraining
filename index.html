@@ -956,6 +956,14 @@ body.normal-mode.fever-active:not(.fever-oni) #status-box{
 body.normal-mode.fever-active .fever-side-lines {display:block;}
 body.normal-mode.fever-active.fever-hot .fever-side-lines {border-color:#ff69b4;}
 body.normal-mode.fever-active.fever-oni .fever-side-lines {border-color:#40e0d0;}
+
+body.scale-question .chord-actions {display:contents;}
+body.scale-question .chord-row > div:first-child {display:flow-root;width:100%;}
+body.scale-question .chord-row > div:first-child::before {
+  content:"";float:right;width:var(--scale-obstacle-width,0px);height:var(--scale-obstacle-height,0px);
+}
+body.scale-question #target-title {display:inline;overflow-wrap:normal;}
+.practice-hint .cheer-phrase {display:inline-block;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -1527,7 +1535,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if(sessionMode==='endless') return ['easy','hard','all'][endlessProgress.level];
       return appSettings.melodyJazz==='on'?'jazz':difficulty().hard?'hard':'easy';
     }
-    function roundLimit(){return practiceMode()?(practiceVariant==='c'?19:26):sessionMode==='mxl'?originalState.queue.length:sessionMode==='mix'?15:sessionMode==='normal'?30:100;}
+    function roundLimit(){return practiceMode()?(practiceVariant==='c'?19:practiceVariant==='scale'?21:26):sessionMode==='mxl'?originalState.queue.length:sessionMode==='mix'?15:sessionMode==='normal'?30:100;}
     function playbackSpeedFactor(){
       if(sessionMode==='mxl')return 1;
       if(sessionMode==='mix')return mixLevel===2?(questionTypeSelect.value==='scale'?.25:.5):(appSettings.speed==='fast'?.5:1);
@@ -1602,23 +1610,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     ];
 
     const jazzScaleDefinitions = [
-      { name: 'Major Scale', intervals: [0, 2, 4, 5, 7, 9, 11, 12] },
-      { name: 'Dorian Scale', intervals: [0, 2, 3, 5, 7, 9, 10, 12] },
-      { name: 'Phrygian Scale', intervals: [0, 1, 3, 5, 7, 8, 10, 12] },
-      { name: 'Lydian Scale', intervals: [0, 2, 4, 6, 7, 9, 11, 12] },
-      { name: 'Mixolydian Scale', intervals: [0, 2, 4, 5, 7, 9, 10, 12] },
-      { name: 'Aeolian Scale', intervals: [0, 2, 3, 5, 7, 8, 10, 12] },
-      { name: 'Locrian Scale', intervals: [0, 1, 3, 5, 6, 8, 10, 12] },
-      { name: 'Harmonic Minor Scale', intervals: [0, 2, 3, 5, 7, 8, 11, 12] },
-      { name: 'Melodic Minor Scale', intervals: [0, 2, 3, 5, 7, 9, 11, 12] },
-      { name: 'Lydian Dominant Scale', intervals: [0, 2, 4, 6, 7, 9, 10, 12] },
-      { name: 'Altered Scale', intervals: [0, 1, 3, 4, 6, 8, 10, 12] },
-      { name: 'Diminished Scale (HW)', intervals: [0, 1, 3, 4, 6, 7, 9, 10, 12] },
-      { name: 'Major Pentatonic Scale', intervals: [0, 2, 4, 7, 9, 12] },
-      { name: 'Minor Pentatonic Scale', intervals: [0, 3, 5, 7, 10, 12] },
-      { name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10, 12] },
-      { name: 'Whole Tone Scale', intervals: [0, 2, 4, 6, 8, 10, 12] },
-      { name: 'Diminished Scale (WH)', intervals: [0, 2, 3, 5, 6, 8, 9, 11, 12] }
+      { level: 0, name: 'Major Scale', intervals: [0, 2, 4, 5, 7, 9, 11, 12] },
+      { level: 0, name: 'Dorian Scale', intervals: [0, 2, 3, 5, 7, 9, 10, 12] },
+      { level: 1, name: 'Phrygian Scale', intervals: [0, 1, 3, 5, 7, 8, 10, 12] },
+      { level: 0, name: 'Lydian Scale', intervals: [0, 2, 4, 6, 7, 9, 11, 12] },
+      { level: 0, name: 'Mixolydian Scale', intervals: [0, 2, 4, 5, 7, 9, 10, 12] },
+      { level: 0, name: 'Aeolian Scale', intervals: [0, 2, 3, 5, 7, 8, 10, 12] },
+      { level: 1, name: 'Locrian Scale', intervals: [0, 1, 3, 5, 6, 8, 10, 12] },
+      { level: 1, name: 'Harmonic Minor Scale', intervals: [0, 2, 3, 5, 7, 8, 11, 12] },
+      { level: 1, name: 'Melodic Minor Scale', intervals: [0, 2, 3, 5, 7, 9, 11, 12] },
+      { level: 2, name: 'Lydian Dominant Scale', intervals: [0, 2, 4, 6, 7, 9, 10, 12] },
+      { level: 2, name: 'Altered Scale', intervals: [0, 1, 3, 4, 6, 8, 10, 12] },
+      { level: 2, name: 'Diminished Scale (HW)', intervals: [0, 1, 3, 4, 6, 7, 9, 10, 12] },
+      { level: 0, name: 'Major Pentatonic Scale', intervals: [0, 2, 4, 7, 9, 12] },
+      { level: 0, name: 'Minor Pentatonic Scale', intervals: [0, 3, 5, 7, 10, 12] },
+      { level: 1, name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10, 12] },
+      { level: 2, name: 'Whole Tone Scale', intervals: [0, 2, 4, 6, 8, 10, 12] },
+      { level: 2, name: 'Diminished Scale (WH)', intervals: [0, 2, 3, 5, 6, 8, 9, 11, 12] },
+      { level: 2, name: 'Bebop Dominant Scale', descendingOnly: true, intervals: [0, 2, 4, 5, 7, 9, 10, 11, 12] },
+      { level: 2, name: 'Bebop Dorian Scale', descendingOnly: true, intervals: [0, 2, 3, 4, 5, 7, 9, 10, 12] },
+      { level: 2, name: 'Bebop Major Scale', descendingOnly: true, intervals: [0, 2, 4, 5, 7, 8, 9, 11, 12] },
+      { level: 2, name: 'Bebop Melodic Minor Scale', descendingOnly: true, intervals: [0, 2, 3, 5, 7, 8, 9, 11, 12] }
     ];
 
     const usedScaleShapes = new Set();
@@ -1757,8 +1769,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
     function availableScaleShapes() {
       const defs = jazzScaleDefinitions.filter(def => sessionMode === 'mix'
-        ? mixScaleAllowed(def) : difficulty().hard || jazzScaleDefinitions.indexOf(def) < 7);
-      const items = defs.flatMap(scaleDef => [false, true].map(isDescending => ({scaleDef, isDescending})));
+        ? mixScaleAllowed(def) : def.level <= (sessionMode === 'endless' ? endlessProgress.level : difficulty().hard ? 2 : 0));
+      const items = defs.flatMap(scaleDef => (scaleDef.descendingOnly ? [true] : [false, true]).map(isDescending => ({scaleDef, isDescending})));
       return unseenInRange(items, usedScaleShapes, scaleShapeKey);
     }
 
@@ -1805,6 +1817,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const mode = questionTypeSelect.value;
       document.querySelector('#scale-expert-group').style.display = mode === 'scale' ? 'block' : 'none';
       document.querySelector('#melody-jazz-group').style.display = mode === 'melody' ? 'block' : 'none';
+      document.body.classList.toggle('scale-question', mode === 'scale');
       playChordBtn.hidden = mode === 'scale';
       playChordBtn.disabled = game.phase === 'idle' || mode === 'scale';
       if (mode === 'chord') {
@@ -2544,6 +2557,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const maxRangeMidi = chordDef.isTension ? 24 : 12;
 
         const isValidSequence = (seq) => {
+          const firstInterval = seq[1].midi - seq[0].midi;
+          if (seq[0].string.number === 1 && (firstInterval === 3 || firstInterval === 4)) return false;
           const minF = Math.min(...seq.map(p => p.fret));
           const maxF = Math.max(...seq.map(p => p.fret));
           if (maxF - minF > 4) return false;
@@ -2818,13 +2833,23 @@ function recordPracticeChord(def,sequence,plan){
       return {sequence,titleName:'C'+def.name,displayKey:'C'+def.name,rootPitchIndex:0,chordMidiNotes,guitarChordForm:form};
     }
 
+    const scalePracticeOrder = [
+      'Major Pentatonic Scale', 'Minor Pentatonic Scale', 'Blues Scale',
+      'Major Scale', 'Lydian Scale', 'Mixolydian Scale', 'Dorian Scale', 'Aeolian Scale',
+      'Phrygian Scale', 'Locrian Scale', 'Melodic Minor Scale', 'Harmonic Minor Scale',
+      'Lydian Dominant Scale', 'Altered Scale', 'Diminished Scale (HW)',
+      'Diminished Scale (WH)', 'Whole Tone Scale', 'Bebop Dominant Scale',
+      'Bebop Dorian Scale', 'Bebop Major Scale', 'Bebop Melodic Minor Scale'
+    ];
     function makeScaleQuestion() {
+      const scalePractice = practiceMode() && practiceVariant === 'scale';
       let outerAttempts = 0;
 
       while (outerAttempts < 50) {
         outerAttempts++;
 
-        const available = availableScaleShapes();
+        const practiceDef = scalePractice ? jazzScaleDefinitions.find(def => def.name === scalePracticeOrder[roundStats.total]) : null;
+        const available = scalePractice ? [{scaleDef:practiceDef, isDescending:!!practiceDef.descendingOnly}] : availableScaleShapes();
         const item = available[Math.floor(Math.random() * available.length)];
 
         const scaleDef = item.scaleDef;
@@ -2833,7 +2858,7 @@ function recordPracticeChord(def,sequence,plan){
         let innerAttempts = 0;
         while (innerAttempts < 100) {
           innerAttempts++;
-          const rootPitchIndex = Math.floor(Math.random() * 12);
+          const rootPitchIndex = scalePractice ? 0 : Math.floor(Math.random() * 12);
           const rootName = pitchNames[rootPitchIndex];
           const scaleTitle = `${rootName} ${scaleDef.name}`;
           const displayKey = `${rootName} Key`;
@@ -2861,7 +2886,7 @@ function recordPracticeChord(def,sequence,plan){
 
           if (possible) {
             const finalSequence = isDescending ? [...ascendingSequence].reverse() : ascendingSequence;
-            usedScaleShapes.add(scaleShapeKey(item));
+            if (!scalePractice) usedScaleShapes.add(scaleShapeKey(item));
             updateDeckCounterDisplay();
 
             return {
@@ -3173,7 +3198,7 @@ function recordPracticeChord(def,sequence,plan){
         mixLastQuestionLevel=mixLevel;
       }
       if(sessionMode==='mxl')return startOriginalQuestion();
-      if(practiceMode()){questionTypeSelect.value='chord';noteCountSelect.value='2';}
+      if(practiceMode()){questionTypeSelect.value=practiceVariant==='scale'?'scale':'chord';noteCountSelect.value='2';}
       clearTimeout(judgmentTimer);
       endGesture();
       ensureAudio();
@@ -3497,7 +3522,7 @@ function recordPracticeChord(def,sequence,plan){
   }
   function syncArcadeUI() {
     const sessionName = sessionMode === 'practice'
-      ? (practiceVariant === 'c' ? 'Interval practice' : 'Chord practice')
+      ? (practiceVariant === 'c' ? 'Interval practice' : practiceVariant === 'scale' ? 'Scale practice' : 'Chord practice')
       : ({normal:'Normal',endless:'Marathon',mix:'Mix',mxl:'mxl'}[sessionMode] || 'Normal');
     document.querySelector('.top-controls').dataset.sessionName = sessionName;
     refreshExtraUI();
@@ -3577,7 +3602,10 @@ function recordPracticeChord(def,sequence,plan){
         particle.className = 'arcade-particle' + (kind==='streak20' ? ' streak20-star' : kind==='oni' ? ' oni-row-star' : '');
         particle.textContent = kind==='oni' ? '★' : kind==='streak20' ? ['★','✦'][i%2] : correct ? ['✦','🐠','🫧','★','🐬'][i%5] : '🫧';
         particle.style.cssText = `--x:${(i*37)%100}%;--size:${18+i%4*7}px;--delay:${i%6*.07}s;color:#ffe087`;
-        if(kind==='oni') particle.style.cssText = `--x:${(i+.5)*100/count}%;--size:24px;--delay:0s;color:#ffe087`;
+        if(kind==='oni') {
+          const position = i / (count - 1);
+          particle.style.cssText = `--x:calc(${position*100}% - ${position*24}px);--size:24px;--delay:0s;width:24px;text-align:center;color:#ffe087`;
+        }
         arcadeLayer.append(particle);
       }
     }
@@ -4400,17 +4428,19 @@ function recordPracticeChord(def,sequence,plan){
   const practicePortrait=document.createElement('div');practicePortrait.className='coral-portrait practice-face';
   const practiceImage=document.createElement('img');practiceImage.src=mascotImage;practiceImage.alt='Coral';practicePortrait.append(practiceImage);
   const practiceSpeech=document.createElement('p');practiceSpeech.id='practice-speech';practiceSpeech.tabIndex=-1;
-  const practiceCButton=document.createElement('button'),practiceAllButton=document.createElement('button'),practiceBack=document.createElement('button');
-  for(const button of [practiceCButton,practiceAllButton,practiceBack]){button.type='button';button.className='practice-choice';}
-  practiceDialog.append(practicePortrait,practiceSpeech,practiceCButton,practiceAllButton,practiceBack);document.body.append(practiceDialog);
+  const practiceCButton=document.createElement('button'),practiceAllButton=document.createElement('button'),practiceScaleButton=document.createElement('button'),practiceBack=document.createElement('button');
+  for(const button of [practiceCButton,practiceAllButton,practiceScaleButton,practiceBack]){button.type='button';button.className='practice-choice';}
+  practiceDialog.append(practicePortrait,practiceSpeech,practiceCButton,practiceAllButton,practiceScaleButton,practiceBack);document.body.append(practiceDialog);
   function updatePracticeText(){
     const en=appSettings.lang==='on';
-    practiceHint.textContent=en?'Finding Normal mode difficult? Try this ↓':'通常モードが難しい方はこちら↓';
+    if(en)practiceHint.textContent='Explore the question types here ↓';
+    else appendCheerPhrases(practiceHint,['出題範囲の確認は','こちら↓']);
     practiceEntry.textContent=en?'🔰 Basic practice mode':'🔰 基礎練習モード';
-    if(en)practiceSpeech.textContent='If Normal mode feels difficult, start practicing here♪';
-    else appendCheerPhrases(practiceSpeech,['通常モードが難しいときは、','まずはこのモードで','練習してね♪']);
+    if(en)practiceSpeech.textContent='Explore the intervals, chords, and scales featured in this game♪';
+    else appendCheerPhrases(practiceSpeech,['このゲームで出題される','音程、','コード、','スケールの種類を','このモードで','確認しよう♪']);
     practiceCButton.textContent=en?'Interval practice (in C)\n(19 questions)':'音程の練習（in C）\n（全19問）';
     practiceAllButton.textContent=en?'Chord practice (in C)\n(26 questions)':'コードの練習（in C）\n（全26問）';
+    practiceScaleButton.textContent=en?'Scale practice (in C)\n(21 questions)':'スケールの練習（in C）\n（全21問）';
     practiceBack.textContent=en?'Back':'戻る';
   }
   practiceEntry.addEventListener('click',()=>{updatePracticeText();welcomeDialog.close();showPopupFromTop(practiceDialog,practiceSpeech);});
@@ -4436,11 +4466,14 @@ function recordPracticeChord(def,sequence,plan){
   function showPracticeStage(advanced){
     clearTimeout(practiceStageTimer);clearArcade();
     if(advanced!==true)playWarpJingle();
-    practiceStageDialog.classList.toggle('tour-notice',advanced==='all');
+    practiceStageDialog.classList.toggle('tour-notice',advanced==='all'||advanced==='scale');
     practiceStageSpeech.textContent=appSettings.lang==='on'?'I’ll quiz you on 19 intervals from C♪':'C音からの19個の音程を\n出題するよ♪';
     if(advanced==='all')appendCheerPhrases(practiceStageSpeech,appSettings.lang==='on'
-      ? ['Let’s explore','the 26 chord types','featured in this game♪']
-      : ['このゲームで出題される','26種類のコード・タイプを','体験しよう♪']);
+      ? ['Let’s practice','the 26 chord types','featured in this game♪']
+      : ['このゲームで出題される','26種類のコード・タイプを','練習しよう♪']);
+    if(advanced==='scale')appendCheerPhrases(practiceStageSpeech,appSettings.lang==='on'
+      ? ['Let’s practice','the 21 scales','featured in this game♪']
+      : ['このゲームで出題される','21種類のスケールを','練習しよう♪']);
     practiceStageDialog.showModal();
     practiceStageTimer=setTimeout(closePracticeStage,3000);
   }
@@ -4448,14 +4481,15 @@ function recordPracticeChord(def,sequence,plan){
     practiceSavedSettings={type:questionTypeSelect.value,count:noteCountSelect.value};
     practiceVariant=variant;sessionMode='practice';gameGeneration++;
     clearArcade();activeVoices.forEach(stop=>stop());
-    questionTypeSelect.value='chord';noteCountSelect.value='2';resetRoundProgress();
-    game={mode:'chord',phase:'idle',target:[],answers:[],titleName:'',displayKey:'',rootPitchIndex:null,chordMidiNotes:[]};
+    questionTypeSelect.value=variant==='scale'?'scale':'chord';noteCountSelect.value='2';resetRoundProgress();
+    game={mode:questionTypeSelect.value,phase:'idle',target:[],answers:[],titleName:'',displayKey:'',rootPitchIndex:null,chordMidiNotes:[]};
     clearBoardMarks();updateOriginalInstrumentChoices();updateUIControls();updateStartButton();syncArcadeUI();setStatus(null,t('initialMsg'));
     practiceDialog.close();welcomeDialog.close();
-    showPracticeStage(variant==='all'?'all':false);
+    showPracticeStage(variant==='c'?false:variant);
   }
   practiceCButton.addEventListener('click',()=>startPractice('c'));
   practiceAllButton.addEventListener('click',()=>startPractice('all'));
+  practiceScaleButton.addEventListener('click',()=>startPractice('scale'));
   function updateWelcomeText(){
     const en=appSettings.lang==='on';
     welcomeTitle.innerHTML=en?'Hello!<br>I’m Coral,<br>the sea magician♪':'こんにちは！<br>私は海の魔法使い<br>コーラルだよ♪';
@@ -4775,8 +4809,7 @@ function mixedChordDefinitions(){
   return tensionChordDefinitions;
 }
 function mixScaleAllowed(def){
-  const i=jazzScaleDefinitions.indexOf(def);
-  return mixLevel===0?i<7:mixLevel===1?[7,8,12,13,14].includes(i):[9,10,11,15,16].includes(i);
+  return def.level === mixLevel;
 }
 function originalPlacement(question,mode,realPositions=null){
   const tuning=instruments[mode].tuning;
@@ -4828,7 +4861,7 @@ function refreshExtraUI(){
     extraTypeSelect.options[0].textContent=en?'Original':'オリジナル';extraTypeSelect.disabled=true;
   }else if(practiceMode()){
     if(extraTypeSelect.dataset.mode!=='practice'){extraTypeSelect.replaceChildren(new Option('','chord'));extraTypeSelect.dataset.mode='practice';}
-    extraTypeSelect.options[0].textContent=practiceVariant==='all'?(en?'Chord tones':'コード構成音'):(en?'Chord / 2 notes':'コード／2音');extraTypeSelect.disabled=true;
+    extraTypeSelect.options[0].textContent=practiceVariant==='scale'?(en?'Scale / in C':'スケール／in C'):practiceVariant==='all'?(en?'Chord tones':'コード構成音'):(en?'Chord / 2 notes':'コード／2音');extraTypeSelect.disabled=true;
   }
   if(custom||mix||practiceMode())noteCountGroup.style.display='none';
   if(practiceMode())firstNoteGroup.style.display='none';
@@ -5242,6 +5275,41 @@ extraUIReady=true;refreshExtraUI();
   }
   window.addEventListener('resize', alignLines);
   alignLines();
+})();
+</script>
+
+<script>
+(() => {
+  const row = document.querySelector('.chord-row');
+  const title = row.firstElementChild;
+  const controls = row.querySelector('.chord-actions');
+  let pending = false;
+  function updateScaleTitleSpace() {
+    pending = false;
+    const bounds = title.getBoundingClientRect();
+    let width = 0, height = 0;
+    for (const element of controls.children) {
+      if (element.hidden || !element.getClientRects().length) continue;
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom <= bounds.top || rect.top >= bounds.bottom) continue;
+      width = Math.max(width, bounds.right - rect.left + 8);
+      height = Math.max(height, rect.bottom - bounds.top + 4);
+    }
+    for (const [property, value] of [['--scale-obstacle-width', width], ['--scale-obstacle-height', height]]) {
+      const pixels = Math.max(0, value) + 'px';
+      if (title.style.getPropertyValue(property) !== pixels) title.style.setProperty(property, pixels);
+    }
+  }
+  function scheduleScaleTitleSpace() {
+    if (!pending) { pending = true; requestAnimationFrame(updateScaleTitleSpace); }
+  }
+  const observer = new ResizeObserver(scheduleScaleTitleSpace);
+  [row, title, ...controls.children].forEach(element => observer.observe(element));
+  new MutationObserver(scheduleScaleTitleSpace).observe(controls, {subtree:true, attributes:true, attributeFilter:['hidden','class']});
+  new MutationObserver(scheduleScaleTitleSpace).observe(document.body, {attributes:true, attributeFilter:['class']});
+  window.addEventListener('resize', scheduleScaleTitleSpace);
+  document.fonts.ready.then(scheduleScaleTitleSpace);
+  scheduleScaleTitleSpace();
 })();
 </script>
 </body>
